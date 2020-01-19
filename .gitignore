@@ -1,3 +1,4 @@
 src/cli/__pycache__/
 src/cli/config.py
 so/libWormAPI.so
+.pydevproject
