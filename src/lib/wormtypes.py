@@ -1,9 +1,22 @@
 from ctypes import *
 
 # Das ist nur der Pointer auf ein struct
-WormContext = c_void_p
+#WormContext1 = pointer(c_void_p())
 
-WormError = c_int
+#class WormContext(pointer(c_int)):
+#    pass
+
+#WormContext = pointer(c_int)
+
+# class WormContext():
+#     ctx = pointer(c_int())
+#     type = POINTER(type(ctx))
+
+class WormContext(Structure):
+    pass
+
+#WormContext = c_void_p
+#WormContext = Structure
 
 
 class WormInitializationState():
@@ -58,6 +71,15 @@ class WormInfo(Structure):
                 ]
 
 
-class Cell(Structure):
-    pass
+WormError = c_int
+
+
+# constants for WormUserId
+WORM_USER_UNAUTHENTICATED = 0
+WORM_USER_ADMIN = 1
+WORM_USER_TIME_ADMIN = 2
+
+
+
+
 
