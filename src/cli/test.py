@@ -13,7 +13,15 @@ worm = Worm(config.path_tse)
 #print(worm.signatureAlgorithm()) # läuft
 
 
-print(worm.info_read()) # läuft nicht richtig (wahrscheinlich weil WormInfo nicht korrekt definiert ist)
+worm.info_read() # läuft nicht richtig (wahrscheinlich weil WormInfo nicht korrekt definiert ist)
+
+print('Kapazität:', worm.info_capacity())
+print('Development-Firmware? =>', worm.info_isDevelopmentFirmware())
+print('Benutzter Speicher:', worm.info_size())
+
+print('Gültige Zeit gesetzt? =>', worm.info_hasValidTime())
+print('Selbsttest gemacht? =>', worm.info_hasPassedSelfTest())
+print('Ist das CTSS-Interface aktiv? =>', worm.info_isCtssInterfaceActive())
 
 #print(worm.runSelfTest()) # läuft (jetzt nicht mehr. Keine Ahnung wieso!!)
 

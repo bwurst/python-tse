@@ -11,35 +11,19 @@ class Worm:
     def __init__(self, mountpoint):
         self.wormlib = cdll.LoadLibrary(os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../so/libWormAPI.so'))
 
-        #self.ctx = c_void_p()
-        #self.ctx = pointer(c_void_p())
-        #self.ctx = pointer(c_int())
-        #self.ctx = byref(c_int())
-        
-        ctx_struct = WormContext()
-        self.ctx = pointer(ctx_struct)
-        print('WormContext vor init: ', self.ctx)
+        self.ctx = WormContext()
+        self.info = None
 
-        #self.type_ctx = c_void_p
-        #self.type_ctx = type(self.ctx)
-                
-        self.type_ctx_struct = WormContext # wird nicht benötigt...
-        self.type_ctx = POINTER(type(self.ctx))
-        
         self.wormlib.worm_init.restype = WormError
-        self.wormlib.worm_init.argtypes = (self.type_ctx, c_char_p)
-        ret = self.wormlib.worm_init(self.ctx, mountpoint.encode('utf-8'))
-        print('WormContext after init: ', self.ctx) # wenn ich die Doku verstanden habe, dann müsste sich der Wert eigentlich geändert haben
+        self.wormlib.worm_init.argtypes = (POINTER(WormContext), c_char_p)
+        ret = self.wormlib.worm_init(byref(self.ctx), mountpoint.encode('utf-8'))
         # FIXME: returncode auswerten
         print('return code for worm_init() => ', ret)
 
 
     def __del__(self):
-        self.wormlib.worm_cleanup.argtypes = (self.type_ctx,)
         self.wormlib.worm_cleanup.restype = WormError
-        print('ok bis vor worm_cleanup')
         ret = self.wormlib.worm_cleanup(self.ctx)
-        print('ok bis nach worm_cleanup')
         # FIXME: returncode auswerten
         print('return code for worm_cleanup() => ', ret)
 
@@ -58,58 +42,84 @@ class Worm:
 
 
     def __info_new(self):
-        self.wormlib.worm_info_new.argtypes = (self.type_ctx,)
+        self.wormlib.worm_info_new.argtypes = (WormContext,)
         self.wormlib.worm_info_new.restype = WormInfo
-        self.info = self.wormlib.worm_info_new(self.ctx)
+        self.info = cast(self.wormlib.worm_info_new(self.ctx), WormInfo)
 
 
     def __info_free(self):
-        self.wormlib.worm_info_free.argtypes = (WormInfo,)
-        self.wormlib.worm_info_free.restype = c_void_p
-        self.wormlib.worm_info_free(self.info)
+        self.wormlib.worm_info_free(byref(self.info))
 
 
     def info_read(self):
-        self.__info_new()
+        if not self.info:
+            self.__info_new()
 
-        self.wormlib.worm_info_read.argtypes = (WormInfo,)
-        self.wormlib.worm_info_read.restype = WormInfo  # und nicht WormError (wie in der API-Spec)
-        self.wormlib.worm_info_read(self.info)
+        self.wormlib.worm_info_read.restype = WormError
+        self.wormlib.worm_info_read.argtypes = (WormInfo, )
+        ret = self.wormlib.worm_info_read(self.info)
 
-        print('isDevelopmentFirmware: ', self.info.isDevelopmentFirmware)
-        print('hasChangedPuk: ', self.info.hasChangedPuk)
-        print('hasValidTime: ', self.info.hasValidTime)
-        print('isExportEnabledIfCspTestFails: ', self.info.isExportEnabledIfCspTestFails)
+        #print('isDevelopmentFirmware: ', self.info.isDevelopmentFirmware)
+        #print('hasChangedPuk: ', self.info.hasChangedPuk)
+        #print('hasValidTime: ', self.info.hasValidTime)
+        #print('isExportEnabledIfCspTestFails: ', self.info.isExportEnabledIfCspTestFails)
 
-        print('maxRegisteredClients: ', self.info.maxRegisteredClients)
-        print('registeredClients: ', self.info.registeredClients)
+        #print('maxRegisteredClients: ', self.info.maxRegisteredClients)
+        #print('registeredClients: ', self.info.registeredClients)
 
         # print('tseDescription: ', self.info.tseDescription)
-        print('size: ', self.info.size)
-        print('capacity: ', self.info.capacity)
-        print('timeUntilNextSelfTest: ', self.info.timeUntilNextSelfTest)
-        print('initializationState: ', self.info.initializationState)
-        print('tsePublicKey: ', self.info.tsePublicKey)
-        print('tseSerialNumber: ', self.info.tseSerialNumber)
-        print('certificateExpirationDate: ', self.info.certificateExpirationDate)
+        #print('size: ', self.info.size)
+        #print('capacity: ', self.info.capacity)
+        #print('timeUntilNextSelfTest: ', self.info.timeUntilNextSelfTest)
+        #print('initializationState: ', self.info.initializationState)
+        #print('tsePublicKey: ', self.info.tsePublicKey)
+        #print('tseSerialNumber: ', self.info.tseSerialNumber)
+        #print('certificateExpirationDate: ', self.info.certificateExpirationDate)
 
-        self.__info_free()
+        #self.__info_free()
 
 
     def info_capacity(self):
-        self.__info_new()
-        
-        self.wormlib.worm_info_capacity.argtypes = (WormInfo, )
-        self.wormlib.worm_info_capacity.restype = c_uint32
+        self.wormlib.worm_info_capacity.restype = c_uint64
         ret = self.wormlib.worm_info_capacity(self.info)
-        print(ret)
+        return ret
 
+    def info_isDevelopmentFirmware(self):
+        self.wormlib.worm_info_isDevelopmentFirmware.restype = c_uint64
+        self.wormlib.worm_info_isDevelopmentFirmware.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_isDevelopmentFirmware(self.info)
+        return bool(ret)
+
+    def info_size(self):
+        self.wormlib.worm_info_size.restype = c_uint64
+        self.wormlib.worm_info_size.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_size(self.info)
+        return ret
+        
+    def info_hasValidTime(self):
+        self.wormlib.worm_info_hasValidTime.restype = c_uint64
+        self.wormlib.worm_info_hasValidTime.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_hasValidTime(self.info)
+        return bool(ret)
+        
+    def info_hasPassedSelfTest(self):
+        self.wormlib.worm_info_hasPassedSelfTest.restype = c_uint64
+        self.wormlib.worm_info_hasPassedSelfTest.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_hasPassedSelfTest(self.info)
+        return bool(ret)
+        
+    def info_isCtssInterfaceActive(self):
+        self.wormlib.worm_info_isCtssInterfaceActive.restype = c_uint64
+        self.wormlib.worm_info_isCtssInterfaceActive.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_isCtssInterfaceActive(self.info)
+        return bool(ret)
+        
         
     def runSelfTest(self):
         clientId = c_wchar_p(config.clientId)
         #print('clientId:', clientId.value)
         
-        self.wormlib.worm_tse_runSelfTest.argtypes = (self.type_ctx, c_wchar_p)
+        self.wormlib.worm_tse_runSelfTest.argtypes = (c_void_p, c_wchar_p)
         self.wormlib.worm_tse_runSelfTest.restype = WormError
         ret = self.wormlib.worm_tse_runSelfTest(self.ctx, clientId)
 
@@ -128,6 +138,7 @@ class Worm:
 
         print('remainingRetries: ', remainingRetries.value)
         print(ret)
+        return ret
         
         
     def user_unblock(self):
@@ -144,6 +155,7 @@ class Worm:
 
         print('remainingRetries: ', remainingRetries.value)
         print(ret)
+        return ret
         
         
     def user_change_puk(self):
