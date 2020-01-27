@@ -66,7 +66,9 @@ class Worm:
     def __info_free(self):
         self.wormlib.worm_info_free.argtypes = (WormInfo,)
         self.wormlib.worm_info_free.restype = c_void_p
+        print('ok bis vor free')
         self.wormlib.worm_info_free(self.info)
+        print('ok bis nach free')
 
 
     def info_read(self):
@@ -84,7 +86,7 @@ class Worm:
         print('maxRegisteredClients: ', self.info.maxRegisteredClients)
         print('registeredClients: ', self.info.registeredClients)
 
-        # print('tseDescription: ', self.info.tseDescription)
+        #print('tseDescription: ', self.info.tseDescription)
         print('size: ', self.info.size)
         print('capacity: ', self.info.capacity)
         print('timeUntilNextSelfTest: ', self.info.timeUntilNextSelfTest)
