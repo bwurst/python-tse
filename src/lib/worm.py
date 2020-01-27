@@ -2,6 +2,7 @@ import os.path
 from ctypes import *
 from wormtypes import *
 import config
+import datetime
 
 
 class Worm:
@@ -113,7 +114,158 @@ class Worm:
         self.wormlib.worm_info_isCtssInterfaceActive.argtypes = (WormInfo,)
         ret = self.wormlib.worm_info_isCtssInterfaceActive(self.info)
         return bool(ret)
+
+    def info_initializationState(self):
+        self.wormlib.worm_info_initializationState.restype = c_uint64
+        self.wormlib.worm_info_initializationState.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_initializationState(self.info)
+        return ret
         
+    def info_isDataImportInProgress(self):
+        self.wormlib.worm_info_isDataImportInProgress.restype = c_uint64
+        self.wormlib.worm_info_isDataImportInProgress.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_isDataImportInProgress(self.info)
+        return bool(ret)
+           
+    def info_hasChangedPuk(self):
+        self.wormlib.worm_info_hasChangedPuk.restype = c_uint64
+        self.wormlib.worm_info_hasChangedPuk.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_hasChangedPuk(self.info)
+        return bool(ret)
+           
+    def info_hasChangedAdminPin(self):
+        self.wormlib.worm_info_hasChangedAdminPin.restype = c_uint64
+        self.wormlib.worm_info_hasChangedAdminPin.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_hasChangedAdminPin(self.info)
+        return bool(ret)
+           
+    def info_hasChangedTimeAdminPin(self):
+        self.wormlib.worm_info_hasChangedTimeAdminPin.restype = c_uint64
+        self.wormlib.worm_info_hasChangedTimeAdminPin.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_hasChangedTimeAdminPin(self.info)
+        return bool(ret)
+           
+    def info_timeUntilNextSelfTest(self):
+        self.wormlib.worm_info_timeUntilNextSelfTest.restype = c_uint64
+        self.wormlib.worm_info_timeUntilNextSelfTest.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_timeUntilNextSelfTest(self.info)
+        return ret
+        
+    def info_startedTransactions(self):
+        self.wormlib.worm_info_startedTransactions.restype = c_uint64
+        self.wormlib.worm_info_startedTransactions.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_startedTransactions(self.info)
+        return ret
+        
+    def info_maxStartedTransactions(self):
+        self.wormlib.worm_info_maxStartedTransactions.restype = c_uint64
+        self.wormlib.worm_info_maxStartedTransactions.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_maxStartedTransactions(self.info)
+        return ret
+        
+        
+    def info_createdSignatures(self):
+        self.wormlib.worm_info_createdSignatures.restype = c_uint64
+        self.wormlib.worm_info_createdSignatures.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_createdSignatures(self.info)
+        return ret
+    
+    def info_maxSignatures(self):
+        self.wormlib.worm_info_maxSignatures.restype = c_uint64
+        self.wormlib.worm_info_maxSignatures.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_maxSignatures(self.info)
+        return ret
+    
+    def info_remainingSignatures(self):
+        self.wormlib.worm_info_remainingSignatures.restype = c_uint64
+        self.wormlib.worm_info_remainingSignatures.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_remainingSignatures(self.info)
+        return ret
+    
+    def info_maxTimeSynchronizationDelay(self):
+        self.wormlib.worm_info_maxTimeSynchronizationDelay.restype = c_uint64
+        self.wormlib.worm_info_maxTimeSynchronizationDelay.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_maxTimeSynchronizationDelay(self.info)
+        return ret
+    
+    def info_maxUpdateDelay(self):
+        self.wormlib.worm_info_maxUpdateDelay.restype = c_uint64
+        self.wormlib.worm_info_maxUpdateDelay.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_maxUpdateDelay(self.info)
+        return ret
+    
+    def info_tsePublicKey(self):
+        publicKey = c_char_p()
+        publicKeyLength = c_uint64()
+        self.wormlib.worm_info_tsePublicKey.argtypes = (WormInfo, POINTER(c_char_p), POINTER(c_uint64))
+        self.wormlib.worm_info_tsePublicKey(self.info, byref(publicKey), byref(publicKeyLength))
+        pubkey = publicKey.value[0:publicKeyLength.value]
+        #FIXME: Diese Variante endet bei einem Null-Byte. Die API sagt explizit, der String ist nicht Null-Terminiert weil ja auch Null innerhalb sein können.
+        return pubkey
+    
+    def info_tseSerialNumber(self):
+        serialNumber = c_char_p()
+        serialNumberLength = c_uint64()
+        self.wormlib.worm_info_tseSerialNumber.argtypes = (WormInfo, POINTER(c_char_p), POINTER(c_uint64))
+        self.wormlib.worm_info_tseSerialNumber(self.info, serialNumber, byref(serialNumberLength))
+        serial = serialNumber.value
+        serial = serial[0:serialNumberLength.value]
+        #FIXME: Diese Variante endet bei einem Null-Byte. Die API sagt explizit, der String ist nicht Null-Terminiert weil ja auch Null innerhalb sein können.
+        return serial 
+    
+    def info_tseDescription(self):
+        self.wormlib.worm_info_tseDescription.restype = c_char_p
+        self.wormlib.worm_info_tseDescription.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_tseDescription(self.info)
+        return ret.decode('latin1')
+    
+    def info_registeredClients(self):
+        self.wormlib.worm_info_registeredClients.restype = c_uint64
+        self.wormlib.worm_info_registeredClients.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_registeredClients(self.info)
+        return ret
+    
+    def info_maxRegisteredClients(self):
+        self.wormlib.worm_info_maxRegisteredClients.restype = c_uint64
+        self.wormlib.worm_info_maxRegisteredClients.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_maxRegisteredClients(self.info)
+        return ret
+        
+    def info_certificateExpirationDate(self):
+        self.wormlib.worm_info_certificateExpirationDate.restype = c_uint64
+        self.wormlib.worm_info_certificateExpirationDate.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_certificateExpirationDate(self.info)
+        return datetime.datetime.fromtimestamp(ret)
+        
+    def info_hardwareVersion(self):
+        self.wormlib.worm_info_hardwareVersion.restype = c_uint64
+        self.wormlib.worm_info_hardwareVersion.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_hardwareVersion(self.info)
+        major = (ret & 0xffff0000) >> 16 
+        minor = (ret & 0x0000ff00) >> 8 
+        patch = (ret & 0x000000ff) 
+        return (major, minor, patch)
+        
+    def info_softwareVersion(self):
+        self.wormlib.worm_info_softwareVersion.restype = c_uint64
+        self.wormlib.worm_info_softwareVersion.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_softwareVersion(self.info)
+        major = (ret & 0xffff0000) >> 16 
+        minor = (ret & 0x0000ff00) >> 8 
+        patch = (ret & 0x000000ff) 
+        return (major, minor, patch)
+        
+    def info_formFactor(self):
+        self.wormlib.worm_info_formFactor.restype = c_char_p
+        self.wormlib.worm_info_formFactor.argtypes = (WormInfo,)
+        ret = self.wormlib.worm_info_formFactor(self.info)
+        return ret.decode('latin1')
+    
+    
+    
+    
+    
+
         
     def runSelfTest(self):
         clientId = c_wchar_p(config.clientId)
