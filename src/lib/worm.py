@@ -5,11 +5,25 @@ import config
 import datetime
 
 
+def find_mountpoint():
+    # Lese alle gemounteten Laufwerke
+    with open('/proc/mounts', 'r') as mounts:
+        # iteriere über die Laufwerke
+        for line in mounts.readlines():
+            dir = line.split(' ')[1]
+            # Teste, ob die Datei vorhanden ist. Erster Treffer wird zurückgegeben.
+            if os.path.exists(os.path.join(dir, 'TSE_COMM.DAT')):
+                return dir
+    return None
+
+
 class Worm:
     wormlib = None
 
 
-    def __init__(self, mountpoint):
+    def __init__(self, mountpoint = None):
+        if not mountpoint:
+            mountpoint = find_mountpoint()
         self.wormlib = cdll.LoadLibrary(os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../so/libWormAPI.so'))
 
         self.ctx = WormContext()
