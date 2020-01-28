@@ -33,7 +33,7 @@ if len(sys.argv) > 1 and sys.argv[1] == '--info':
     print('Zahl der offenen Transaktionen: %i / %i' % (worm.info.startedTransactions, worm.info.maxStartedTransactions))
     print('Zahl der bisherigen Signaturen: %i / %i (noch %i übrig)' % (worm.info.createdSignatures, worm.info.maxSignatures, worm.info.remainingSignatures))
     
-    print('TSE-Beschreibung:', worm.info.tseDescription)
+    print('TSE-Beschreibung:', worm.info.tseDescription, 'Customization:', worm.info.customizationIdentifier.decode('ascii'))
     print('Signatur-Algorithmus:', worm.signatureAlgorithm())
     print('Pubkey:', base64_encode(worm.info.tsePublicKey))
     print('Serial:', bytes(worm.info.tseSerialNumber).hex())
