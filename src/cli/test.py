@@ -10,44 +10,46 @@ from worm import Worm
 
 worm = Worm()
 
-#print(worm.getVersion()) # läuft
-#print(worm.signatureAlgorithm()) # läuft
+if len(sys.argv) > 1 and sys.argv[1] == '--info':
+    print('Kapazität:', worm.info.capacity)
+    print('Development-Firmware? =>', worm.info.isDevelopmentFirmware)
+    print('Benutzter Speicher:', worm.info.size)
+    
+    print('Gültige Zeit gesetzt? =>', worm.info.hasValidTime)
+    print('Selbsttest gemacht? =>', worm.info.hasPassedSelfTest)
+    print('Ist das CTSS-Interface aktiv? =>', worm.info.isCtssInterfaceActive)
+    print('Initialisierungs-Status:', worm.info.initializationState)
+    
+    print('Transaktion läuft grade? =>', worm.info.isDataImportInProgress)
+    
+    print('PUK schon gesetzt? =>', worm.info.hasChangedPuk)
+    print('Admin-PIN schon gesetzt? =>', worm.info.hasChangedAdminPin)
+    print('Time-Admin-PIN schon gesetzt? =>', worm.info.hasChangedTimeAdminPin)
+    
+    print('Zeit bis zum nächsten Selbsttest:', worm.info.timeUntilNextSelfTest)
+    print('Zeit bis zum nächsten Time-Sync:', worm.info.maxTimeSynchronizationDelay)
+    print('Maximale Dauer einer offenen Transaktion:', worm.info.maxUpdateDelay)
+    
+    print('Zahl der offenen Transaktionen: %i / %i' % (worm.info.startedTransactions, worm.info.maxStartedTransactions))
+    print('Zahl der bisherigen Signaturen: %i / %i (noch %i übrig)' % (worm.info.createdSignatures, worm.info.maxSignatures, worm.info.remainingSignatures))
+    
+    print('TSE-Beschreibung:', worm.info.tseDescription)
+    print('Signatur-Algorithmus:', worm.signatureAlgorithm())
+    print('Pubkey:', worm.info.tsePublicKey)
+    print('Serial:', worm.info.tseSerialNumber)
+    
+    print('Zahl der aktiven Clients: %i / %i' % (worm.info.registeredClients, worm.info.maxRegisteredClients))
+    print('Zertifikat-Ablaufdatum:', worm.info.certificateExpirationDate)
+    
+    print('Hardware-Version: %i.%i.%i' % worm.info.hardwareVersion)
+    print('Software-Version: %i.%i.%i' % worm.info.softwareVersion)
+    print('Library-Version:', worm.getVersion())
+    print('TSE Form-Factor:', worm.info.formFactor)
+    
+    worm.flash_health_summary()
 
-
-worm.info_read() # läuft nicht richtig (wahrscheinlich weil WormInfo nicht korrekt definiert ist)
-
-print('Kapazität:', worm.info_capacity())
-print('Development-Firmware? =>', worm.info_isDevelopmentFirmware())
-print('Benutzter Speicher:', worm.info_size())
-
-print('Gültige Zeit gesetzt? =>', worm.info_hasValidTime())
-print('Selbsttest gemacht? =>', worm.info_hasPassedSelfTest())
-print('Ist das CTSS-Interface aktiv? =>', worm.info_isCtssInterfaceActive())
-print('Initialisierungs-Status:', worm.info_initializationState())
-
-print('Transaktion läuft grade? =>', worm.info_isDataImportInProgress())
-
-print('PUK schon gesetzt? =>', worm.info_hasChangedPuk())
-print('Admin-PIN schon gesetzt? =>', worm.info_hasChangedAdminPin())
-print('Time-Admin-PIN schon gesetzt? =>', worm.info_hasChangedTimeAdminPin())
-
-print('Zeit bis zum nächsten Selbsttest:', worm.info_timeUntilNextSelfTest())
-print('Zeit bis zum nächsten Time-Sync:', worm.info_maxTimeSynchronizationDelay())
-print('Maximale Dauer einer offenen Transaktion:', worm.info_maxUpdateDelay())
-
-print('Zahl der offenen Transaktionen: %i / %i' % (worm.info_startedTransactions(), worm.info_maxStartedTransactions()))
-print('Zahl der bisherigen Signaturen: %i / %i (noch %i übrig)' % (worm.info_createdSignatures(), worm.info_maxSignatures(), worm.info_remainingSignatures()))
-
-print('TSE-Beschreibung:', worm.info_tseDescription())
-print('Pubkey:', worm.info_tsePublicKey())
-print('Serial:', worm.info_tseSerialNumber())
-
-print('Zahl der aktiven Clients: %i / %i' % (worm.info_registeredClients(), worm.info_maxRegisteredClients()))
-print('Zertifikat-Ablaufdatum:', worm.info_certificateExpirationDate())
-
-print('Hardware-Version: %i.%i.%i' % worm.info_hardwareVersion())
-print('Software-Version: %i.%i.%i' % worm.info_softwareVersion())
-print('TSE Form-Factor:', worm.info_formFactor())
+if len(sys.argv) > 1 and sys.argv[1] == '--reset':
+    worm.tse_factoryReset()
 
 
 
