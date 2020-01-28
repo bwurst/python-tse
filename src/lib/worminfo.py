@@ -79,8 +79,6 @@ class Worm_Info:
 
 
     def __get_date(self, key):
-        if not self.info:
-            self.__info_read()
         getattr(self.wormlib, 'worm_info_'+key).restype = c_uint64
         getattr(self.wormlib, 'worm_info_'+key).argtypes = (WormInfo,)
         ret = getattr(self.wormlib, 'worm_info_'+key)(self.info)

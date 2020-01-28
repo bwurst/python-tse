@@ -1,7 +1,7 @@
-
 import config
 import sys
 import os.path
+from encodings.base64_codec import base64_encode
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib'))
 
@@ -51,7 +51,45 @@ if len(sys.argv) > 1 and sys.argv[1] == '--info':
 if len(sys.argv) > 1 and sys.argv[1] == '--reset':
     worm.tse_factoryReset()
 
+if len(sys.argv) > 1 and sys.argv[1] == '--selftest':
+    worm.tse_runSelfTest(config.clientId)
 
+if len(sys.argv) > 1 and sys.argv[1] == '--setup':
+    if not worm.info.hasPassedSelfTest:
+        worm.tse_runSelfTest(config.clientId)
+    worm.tse_setup('SwissbitSwissbit', config.PUK, config.PIN, config.PIN_TIME_ADMIN, config.clientId)
+
+if len(sys.argv) > 1 and sys.argv[1] == '--time':
+    worm.tse_updateTime()
+
+if len(sys.argv) > 1 and sys.argv[1] == '--login':
+    worm.user_login()
+
+if len(sys.argv) > 1 and sys.argv[1] == '--initcreds':
+    worm.user_deriveInitialCredentials()
+
+
+if len(sys.argv) > 1 and sys.argv[1] == '--trxstart':
+    response = worm.transaction_start(config.clientId, 'processdata'.encode('ascii'), 'BELEG')
+    num = response.transactionNumber
+    print(num)
+    print(response.signatureCounter)
+    response = worm.transaction_update(config.clientId, num, 'processdata2'.encode('ascii'), 'BELEG')
+    print(response.signatureCounter)
+    response = worm.transaction_finish(config.clientId, num, 'processdata3'.encode('ascii'), 'BELEG')
+    print(response.signatureCounter)
+    print(base64_encode(response.signature))
+
+
+if len(sys.argv) > 1 and sys.argv[1] == '--trxlist':
+    trx = worm.transaction_listStartedTransactions(config.clientId, 0)
+    print(trx)
+
+if len(sys.argv) > 1 and sys.argv[1] == '--trxfinishall':
+    trx = worm.transaction_listStartedTransactions(config.clientId, 0)
+    for t in trx:
+        response = worm.transaction_finish(config.clientId, t, ''.encode('ascii'), 'BELEG')
+        
 
 #print(worm.runSelfTest()) # läuft (jetzt nicht mehr. Keine Ahnung wieso!!)
 
