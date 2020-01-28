@@ -1,7 +1,6 @@
 import os.path
 from ctypes import *
 from wormtypes import *
-import config
 import datetime
 from worminfo import Worm_Info
 from wormentry import Worm_Entry
@@ -22,7 +21,8 @@ def find_mountpoint():
 class Worm:
     wormlib = None
 
-    def __init__(self, clientid, mountpoint = None):
+    def __init__(self, clientid, mountpoint = None, time_admin_pin = None):
+        self.time_admin_pin = time_admin_pin
         self.clientid = clientid
         if not mountpoint:
             mountpoint = find_mountpoint()
@@ -106,6 +106,8 @@ class Worm:
         return ret
         
     def tse_updateTime(self):
+        if self.time_admin_pin:
+            self.user_login(WORM_USER_TIME_ADMIN, self.time_admin_pin)
         self.wormlib.worm_tse_updateTime.argtypes = (WormContext, c_uint64)
         self.wormlib.worm_tse_updateTime.restype = WormError
         ret = self.wormlib.worm_tse_updateTime(self.ctx, int(datetime.datetime.now().timestamp()))
@@ -114,9 +116,9 @@ class Worm:
         
     
         
-    def user_login(self):
-        WormUserId = WORM_USER_ADMIN # WORM_USER_ADMIN
-        pin = config.PIN.encode('ascii')
+    def user_login(self, userid, pin):
+        WormUserId = userid # WORM_USER_ADMIN
+        pin = pin.encode('ascii')
         remainingRetries = c_int()
         
         self.wormlib.worm_user_login.argtypes = (WormContext, c_int, c_char_p, c_int, POINTER(c_int))

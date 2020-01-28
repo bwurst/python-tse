@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from worm import Worm
 
-worm = Worm(clientid=config.clientId)
+worm = Worm(clientid=config.clientId, time_admin_pin=config.PIN_TIME_ADMIN)
 
 if len(sys.argv) > 1 and sys.argv[1] == '--info':
     print('Kapazität:', worm.info.capacity)
