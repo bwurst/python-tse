@@ -4,6 +4,7 @@ from wormtypes import *
 import config
 import datetime
 from worminfo import Worm_Info
+from wormentry import Worm_Entry
 from wormtransactionresponse import Worm_Transaction_Response
 
 def find_mountpoint():
@@ -36,6 +37,7 @@ class Worm:
         print('return code for worm_init() => ', ret)
         
         self.info = Worm_Info(self)
+        self.entry = Worm_Entry(self)
 
 
     def __del__(self):
@@ -190,20 +192,33 @@ class Worm:
     
     def getLogMessageCertificate(self):
         s = c_char_p()
-        sLength = c_uint64()
-        self.wormlib.worm_getLogMessageCertificate.argtypes = (WormContext, POINTER(c_char_p), POINTER(c_uint64))
-        res = self.wormlib.worm_getLogMessageCertificate(self.ctx, byref(s), byref(sLength))
+        buffer = pointer((c_char * 1024*1024)())
+        sLength = c_uint64(1024*1024) # 1 MB
+        self.wormlib.worm_getLogMessageCertificate.argtypes = (WormContext, POINTER(c_char * 1024*1024), POINTER(c_uint64))
+        res = self.wormlib.worm_getLogMessageCertificate(self.ctx, buffer, byref(sLength))
         if res != 0:
             print('getLogMessageCertificate() =>', res)
-        s = cast(s, POINTER(c_char))
+        s = cast(buffer, POINTER(c_char))
         ret = string_at(s, size=sLength.value)
         return ret
 
-    def export_tar(self, filename):
+    def export_tar(self, filename, clientid=None, time_start=None, time_end=None, trxid_start=None, trxid_end=None):
         CALLBACK = CFUNCTYPE(c_int, POINTER(c_char), c_uint64, c_void_p)
         callback = CALLBACK(self.export_tar_callback)
         with open(filename, 'wb') as self.tarfile:
-            self.wormlib.worm_export_tar(self.ctx, callback, None)
+            if time_start:
+                if type(time_start) == datetime.datetime:
+                    time_start = int(time_start.timestamp())
+                    time_end = int(time_start.timestamp())
+                assert type(time_start) == int
+                assert type(time_end) == int
+                self.wormlib.worm_export_tar_filtered_time(self.ctx, c_uint64(time_start), c_uint64(time_end), c_char_p(clientid), callback, None)
+            elif trxid_start:
+                assert type(trxid_start) == int
+                assert type(trxid_end) == int
+                self.wormlib.worm_export_tar_filtered_transaction(self.ctx, c_uint64(trxid_start), c_uint64(trxid_end), c_char_p(clientid), callback, None)
+            else:
+                self.wormlib.worm_export_tar(self.ctx, callback, None)
     
     
     def export_tar_callback(self, chunk, chunklen, data):

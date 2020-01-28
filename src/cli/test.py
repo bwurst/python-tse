@@ -93,6 +93,17 @@ if len(sys.argv) > 1 and sys.argv[1] == '--trxfinishall':
 if len(sys.argv) > 2 and sys.argv[1] == '--export-tar':
     worm.export_tar(sys.argv[2])
 
+if len(sys.argv) > 1 and sys.argv[1] == '--cert':
+    print(worm.getLogMessageCertificate().decode())
+
+if len(sys.argv) > 1 and sys.argv[1] == '--listentries':
+    e = worm.entry
+    worm.entry.iterate_first()
+    while e.isValid:
+        print('Transaktion: #%i (%s)' % (e.id, e.type))
+        print('  ', e.readLogMessage())
+        print('  ', e.readProcessData())
+        worm.entry.iterate_next()
         
 
 #print(worm.runSelfTest()) # läuft (jetzt nicht mehr. Keine Ahnung wieso!!)
