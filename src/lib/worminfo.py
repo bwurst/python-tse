@@ -64,8 +64,8 @@ class Worm_Info:
         sLength = c_uint64()
         getattr(self.wormlib, 'worm_info_'+key).argtypes = (WormInfo, POINTER(c_char_p), POINTER(c_uint64))
         getattr(self.wormlib, 'worm_info_'+key)(self.info, byref(s), byref(sLength))
-        ret = s.value[0:sLength.value]
-        #FIXME: Diese Variante endet bei einem Null-Byte. Die API sagt explizit, der String ist nicht Null-Terminiert weil ja auch Null innerhalb sein können.
+        s = cast(s, POINTER(c_char))
+        ret = string_at(s, size=sLength.value)
         return ret
         
     def __get_version(self, key):
