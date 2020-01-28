@@ -90,6 +90,10 @@ if len(sys.argv) > 1 and sys.argv[1] == '--trxfinishall':
     for t in trx:
         response = worm.transaction_finish(config.clientId, t, ''.encode('ascii'), 'BELEG')
         
+if len(sys.argv) > 2 and sys.argv[1] == '--export-tar':
+    worm.export_tar(sys.argv[2])
+
+        
 
 #print(worm.runSelfTest()) # läuft (jetzt nicht mehr. Keine Ahnung wieso!!)
 

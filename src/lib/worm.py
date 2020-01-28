@@ -184,7 +184,38 @@ class Worm:
         return numbers_buffer[:count.value]
             
         
+    ####################################################################
+    # Export
+    ####################################################################
     
+    def getLogMessageCertificate(self):
+        s = c_char_p()
+        sLength = c_uint64()
+        self.wormlib.worm_getLogMessageCertificate.argtypes = (WormContext, POINTER(c_char_p), POINTER(c_uint64))
+        res = self.wormlib.worm_getLogMessageCertificate(self.ctx, byref(s), byref(sLength))
+        if res != 0:
+            print('getLogMessageCertificate() =>', res)
+        s = cast(s, POINTER(c_char))
+        ret = string_at(s, size=sLength.value)
+        return ret
+
+    def export_tar(self, filename):
+        CALLBACK = CFUNCTYPE(c_int, POINTER(c_char), c_uint64, c_void_p)
+        callback = CALLBACK(self.export_tar_callback)
+        with open(filename, 'wb') as self.tarfile:
+            self.wormlib.worm_export_tar(self.ctx, callback, None)
+    
+    
+    def export_tar_callback(self, chunk, chunklen, data):
+        chunk = cast(chunk, POINTER(c_char))
+        if not self.tarfile:
+            # Sollte schon vorhanden sein, sonst Fehler
+            return 1
+        self.tarfile.write(string_at(chunk, chunklen))
+        return 0
+
+
+
         
     ####################################################################
     # disfunctional
