@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from worm import Worm
 
-worm = Worm()
+worm = Worm(clientid=config.clientId)
 
 if len(sys.argv) > 1 and sys.argv[1] == '--info':
     print('Kapazität:', worm.info.capacity)
@@ -35,8 +35,8 @@ if len(sys.argv) > 1 and sys.argv[1] == '--info':
     
     print('TSE-Beschreibung:', worm.info.tseDescription)
     print('Signatur-Algorithmus:', worm.signatureAlgorithm())
-    print('Pubkey:', worm.info.tsePublicKey)
-    print('Serial:', worm.info.tseSerialNumber)
+    print('Pubkey:', base64_encode(worm.info.tsePublicKey))
+    print('Serial:', bytes(worm.info.tseSerialNumber).hex())
     
     print('Zahl der aktiven Clients: %i / %i' % (worm.info.registeredClients, worm.info.maxRegisteredClients))
     print('Zertifikat-Ablaufdatum:', worm.info.certificateExpirationDate)
@@ -52,12 +52,12 @@ if len(sys.argv) > 1 and sys.argv[1] == '--reset':
     worm.tse_factoryReset()
 
 if len(sys.argv) > 1 and sys.argv[1] == '--selftest':
-    worm.tse_runSelfTest(config.clientId)
+    worm.tse_runSelfTest()
 
 if len(sys.argv) > 1 and sys.argv[1] == '--setup':
     if not worm.info.hasPassedSelfTest:
-        worm.tse_runSelfTest(config.clientId)
-    worm.tse_setup('SwissbitSwissbit', config.PUK, config.PIN, config.PIN_TIME_ADMIN, config.clientId)
+        worm.tse_runSelfTest()
+    worm.tse_setup('SwissbitSwissbit', config.PUK, config.PIN, config.PIN_TIME_ADMIN)
 
 if len(sys.argv) > 1 and sys.argv[1] == '--time':
     worm.tse_updateTime()
@@ -70,25 +70,25 @@ if len(sys.argv) > 1 and sys.argv[1] == '--initcreds':
 
 
 if len(sys.argv) > 1 and sys.argv[1] == '--trxstart':
-    response = worm.transaction_start(config.clientId, 'processdata'.encode('ascii'), 'BELEG')
+    response = worm.transaction_start('processdata'.encode('ascii'), 'Bestellung-V1')
     num = response.transactionNumber
     print(num)
     print(response.signatureCounter)
-    response = worm.transaction_update(config.clientId, num, 'processdata2'.encode('ascii'), 'BELEG')
+    response = worm.transaction_update(num, 'processdata2'.encode('ascii'), 'Bestellung-V1')
     print(response.signatureCounter)
-    response = worm.transaction_finish(config.clientId, num, 'processdata3'.encode('ascii'), 'BELEG')
+    response = worm.transaction_finish(num, 'processdata3'.encode('ascii'), 'Bestellung-V1')
     print(response.signatureCounter)
     print(base64_encode(response.signature))
 
 
 if len(sys.argv) > 1 and sys.argv[1] == '--trxlist':
-    trx = worm.transaction_listStartedTransactions(config.clientId, 0)
+    trx = worm.transaction_listStartedTransactions(0)
     print(trx)
 
 if len(sys.argv) > 1 and sys.argv[1] == '--trxfinishall':
-    trx = worm.transaction_listStartedTransactions(config.clientId, 0)
+    trx = worm.transaction_listStartedTransactions(0)
     for t in trx:
-        response = worm.transaction_finish(config.clientId, t, ''.encode('ascii'), 'BELEG')
+        response = worm.transaction_finish(t, ''.encode('ascii'), 'Bestellung-V1')
         
 if len(sys.argv) > 2 and sys.argv[1] == '--export-tar':
     worm.export_tar(sys.argv[2])

@@ -22,7 +22,8 @@ def find_mountpoint():
 class Worm:
     wormlib = None
 
-    def __init__(self, mountpoint = None):
+    def __init__(self, clientid, mountpoint = None):
+        self.clientid = clientid
         if not mountpoint:
             mountpoint = find_mountpoint()
         self.wormlib = cdll.LoadLibrary(os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../so/libWormAPI.so'))
@@ -36,8 +37,14 @@ class Worm:
         # FIXME: returncode auswerten
         print('return code for worm_init() => ', ret)
         
-        self.info = Worm_Info(self)
         self.entry = Worm_Entry(self)
+        self.info = Worm_Info(self)
+        if self.info.initializationState == WORM_INIT_DECOMMISSIONED:
+            raise RuntimeError('TSE ist unwiderruflich außer Betrieb gesetzt und kann nicht mehr benutzt werden!')
+        elif self.info.initializationState == WORM_INIT_UNINITIALIZED:
+            import warnings
+            warnings.warn(RuntimeWarning('TSE ist noch nicht initialisiert. Bitte zuerst initialisieren!'))
+        
 
 
     def __del__(self):
@@ -75,7 +82,7 @@ class Worm:
         # FIXME: Error handling
         return ret
     
-    def tse_setup(self, credentialseed, adminpuk, adminpin, timeadminpin, clientid):
+    def tse_setup(self, credentialseed, adminpuk, adminpin, timeadminpin):
         if self.info.initializationState == WORM_INIT_INITIALIZED:
             print('initialization ist schon erfolgt!')
             return False
@@ -84,15 +91,15 @@ class Worm:
         ret = self.wormlib.worm_tse_setup(self.ctx, credentialseed.encode('ascii'), len(credentialseed), 
                                           adminpuk.encode('ascii'), len(adminpuk), adminpin.encode('ascii'), 
                                           len(adminpin), timeadminpin.encode('ascii'), len(timeadminpin), 
-                                          clientid.encode('ascii'))
+                                          self.clientid.encode('ascii'))
         # FIXME: Error handling
         return ret
     
     
-    def tse_runSelfTest(self, clientid):
+    def tse_runSelfTest(self):
         self.wormlib.worm_tse_runSelfTest.argtypes = (WormContext, c_char_p)
         self.wormlib.worm_tse_runSelfTest.restype = WormError
-        ret = self.wormlib.worm_tse_runSelfTest(self.ctx, clientid.encode('ascii'))
+        ret = self.wormlib.worm_tse_runSelfTest(self.ctx, self.clientid.encode('ascii'))
         return ret
         
     def tse_updateTime(self):
@@ -137,12 +144,21 @@ class Worm:
     # Transactions
     ####################################################################
         
+    def __pre_transaction_checks(self):
+        if not self.info.hasPassedSelfTest:
+            self.tse_runSelfTest()
+        if not self.info.hasValidTime:
+            self.tse_updateTime()
+        if not self.info.isCtssInterfaceActive:
+            raise RuntimeError('TSE not ready!')
+
         
-    def transaction_start(self, clientid, processdata, processtype):
+    def transaction_start(self, processdata, processtype):
+        self.__pre_transaction_checks()
         r = Worm_Transaction_Response(self)
         self.wormlib.worm_transaction_start.argtypes = (WormContext, c_char_p, c_char_p, c_int, c_char_p, WormTransactionResponse)
         self.wormlib.worm_transaction_start.restype = WormError
-        ret = self.wormlib.worm_transaction_start(self.ctx, clientid.encode('ascii'), processdata, 
+        ret = self.wormlib.worm_transaction_start(self.ctx, self.clientid.encode('ascii'), processdata, 
                                                   len(processdata), processtype.encode('ascii'), r.response)
         if ret != 0:
             print('transaction_start() =>', ret)
@@ -151,11 +167,12 @@ class Worm:
         return r
 
         
-    def transaction_update(self, clientid, transactionnumber, processdata, processtype):
+    def transaction_update(self, transactionnumber, processdata, processtype):
+        self.__pre_transaction_checks()
         r = Worm_Transaction_Response(self)
         self.wormlib.worm_transaction_update.argtypes = (WormContext, c_char_p, c_uint64, c_char_p, c_int, c_char_p, WormTransactionResponse)
         self.wormlib.worm_transaction_update.restype = WormError
-        ret = self.wormlib.worm_transaction_update(self.ctx, clientid.encode('ascii'), transactionnumber, processdata, 
+        ret = self.wormlib.worm_transaction_update(self.ctx, self.clientid.encode('ascii'), transactionnumber, processdata, 
                                                   len(processdata), processtype.encode('ascii'), r.response)
         if ret != 0:
             print('transaction_update() =>', ret)
@@ -163,11 +180,12 @@ class Worm:
         # FIXME: return code / error handling
         return r
         
-    def transaction_finish(self, clientid, transactionnumber, processdata, processtype):
+    def transaction_finish(self, transactionnumber, processdata, processtype):
+        self.__pre_transaction_checks()
         r = Worm_Transaction_Response(self)
         self.wormlib.worm_transaction_finish.argtypes = (WormContext, c_char_p, c_uint64, c_char_p, c_int, c_char_p, WormTransactionResponse)
         self.wormlib.worm_transaction_finish.restype = WormError
-        ret = self.wormlib.worm_transaction_finish(self.ctx, clientid.encode('ascii'), transactionnumber, processdata, 
+        ret = self.wormlib.worm_transaction_finish(self.ctx, self.clientid.encode('ascii'), transactionnumber, processdata, 
                                                   len(processdata), processtype.encode('ascii'), r.response)
         if ret != 0:
             print('transaction_finish() =>', ret)
@@ -175,12 +193,12 @@ class Worm:
         # FIXME: return code / error handling
         return r
         
-    def transaction_listStartedTransactions(self, clientid, skip):
+    def transaction_listStartedTransactions(self, skip):
         numbers_buffer = (c_uint64 * 62)()
         count = c_int()
         self.wormlib.worm_transaction_listStartedTransactions.argtypes = (WormContext, c_char_p, c_uint64, c_uint64 * 62, c_int, POINTER(c_int))
         self.wormlib.worm_transaction_listStartedTransactions.restype = WormError
-        ret = self.wormlib.worm_transaction_listStartedTransactions(self.ctx, clientid.encode('ascii'), skip, numbers_buffer, 62, byref(count))
+        ret = self.wormlib.worm_transaction_listStartedTransactions(self.ctx, self.clientid.encode('ascii'), skip, numbers_buffer, 62, byref(count))
         if ret != 0:
             print('transaction_listStartedTransactions() =>', ret)
         return numbers_buffer[:count.value]
