@@ -80,6 +80,7 @@ class Worm:
         self.wormlib.worm_tse_factoryReset.argtypes = (WormContext, )
         ret = self.wormlib.worm_tse_factoryReset(self.ctx)
         # FIXME: Error handling
+        self.info.update()
         return ret
     
     def tse_setup(self, credentialseed, adminpuk, adminpin, timeadminpin):
@@ -93,6 +94,7 @@ class Worm:
                                           len(adminpin), timeadminpin.encode('ascii'), len(timeadminpin), 
                                           self.clientid.encode('ascii'))
         # FIXME: Error handling
+        self.info.update()
         return ret
     
     
@@ -100,12 +102,14 @@ class Worm:
         self.wormlib.worm_tse_runSelfTest.argtypes = (WormContext, c_char_p)
         self.wormlib.worm_tse_runSelfTest.restype = WormError
         ret = self.wormlib.worm_tse_runSelfTest(self.ctx, self.clientid.encode('ascii'))
+        self.info.update()
         return ret
         
     def tse_updateTime(self):
         self.wormlib.worm_tse_updateTime.argtypes = (WormContext, c_uint64)
         self.wormlib.worm_tse_updateTime.restype = WormError
         ret = self.wormlib.worm_tse_updateTime(self.ctx, int(datetime.datetime.now().timestamp()))
+        self.info.update()
         return ret
         
     
@@ -121,6 +125,7 @@ class Worm:
 
         print('remainingRetries: ', remainingRetries.value)
         print(ret)
+        self.info.update()
         return ret
         
     def user_deriveInitialCredentials(self):
@@ -191,6 +196,7 @@ class Worm:
             print('transaction_finish() =>', ret)
         #print(self.wormlib.worm_transaction_response_transactionNumber(byref(r.response)))
         # FIXME: return code / error handling
+        self.info.update()
         return r
         
     def transaction_listStartedTransactions(self, skip):

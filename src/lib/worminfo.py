@@ -13,6 +13,9 @@ class Worm_Info:
         self.info = cast(self.wormlib.worm_info_new(self.ctx), WormInfo)
         self.wormlib.worm_info_read.restype = WormError
         self.wormlib.worm_info_read.argtypes = (WormInfo, )
+        self.update()
+        
+    def update(self):
         ret = self.wormlib.worm_info_read(self.info)
         # FIXME: Error handling
 

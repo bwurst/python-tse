@@ -27,7 +27,7 @@ if len(sys.argv) > 1 and sys.argv[1] == '--info':
     print('Time-Admin-PIN schon gesetzt? =>', worm.info.hasChangedTimeAdminPin)
     
     print('Zeit bis zum nächsten Selbsttest:', worm.info.timeUntilNextSelfTest)
-    print('Zeit bis zum nächsten Time-Sync:', worm.info.maxTimeSynchronizationDelay)
+    print('Zeit zwischen zwei Time-Syncs:', worm.info.maxTimeSynchronizationDelay)
     print('Maximale Dauer einer offenen Transaktion:', worm.info.maxUpdateDelay)
     
     print('Zahl der offenen Transaktionen: %i / %i' % (worm.info.startedTransactions, worm.info.maxStartedTransactions))
