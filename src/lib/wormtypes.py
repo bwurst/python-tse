@@ -1,4 +1,4 @@
-from ctypes import *
+from ctypes import c_void_p, c_int, c_uint64
 
 WormContext = c_void_p
 WormInfo = c_void_p

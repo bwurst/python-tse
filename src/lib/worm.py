@@ -21,12 +21,18 @@ def find_mountpoint():
 class Worm:
     wormlib = None
 
-    def __init__(self, clientid, mountpoint = None, time_admin_pin = None):
+    def __init__(self, clientid, mountpoint = None, time_admin_pin = None, library = None):
         self.time_admin_pin = time_admin_pin
         self.clientid = clientid
         if not mountpoint:
             mountpoint = find_mountpoint()
-        self.wormlib = cdll.LoadLibrary(os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../so/libWormAPI.so'))
+        if not mountpoint:
+            raise RuntimeError('Cannot find TSE unit!')
+        if not library:
+            library = os.path.abspath(os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../so/libWormAPI.so'))
+        if not os.path.exists(library):
+            raise RuntimeError('Cannot find TSE / SMAERS library. Was expected as %s' % library)
+        self.wormlib = cdll.LoadLibrary(library)
 
         self.ctx = WormContext()
         self.info = None
@@ -34,8 +40,10 @@ class Worm:
         self.wormlib.worm_init.restype = WormError
         self.wormlib.worm_init.argtypes = (POINTER(WormContext), c_char_p)
         ret = self.wormlib.worm_init(byref(self.ctx), mountpoint.encode('utf-8'))
+
         # FIXME: returncode auswerten
-        print('return code for worm_init() => ', ret)
+        if ret != 0:
+            print('return code for worm_init() => ', ret)
         
         self.entry = Worm_Entry(self)
         self.info = Worm_Info(self)
@@ -53,7 +61,8 @@ class Worm:
         self.wormlib.worm_cleanup.restype = WormError
         ret = self.wormlib.worm_cleanup(self.ctx)
         # FIXME: returncode auswerten
-        print('return code for worm_cleanup() => ', ret)
+        if ret != 0:
+            print('return code for worm_cleanup() => ', ret)
 
     ####################################################################
     # Library Information
@@ -152,6 +161,7 @@ class Worm:
     ####################################################################
         
     def __pre_transaction_checks(self):
+        self.info.update()
         if not self.info.hasPassedSelfTest:
             self.tse_runSelfTest()
         if not self.info.hasValidTime:
@@ -201,7 +211,7 @@ class Worm:
         self.info.update()
         return r
         
-    def transaction_listStartedTransactions(self, skip):
+    def transaction_listStartedTransactions(self, skip=0):
         numbers_buffer = (c_uint64 * 62)()
         count = c_int()
         self.wormlib.worm_transaction_listStartedTransactions.argtypes = (WormContext, c_char_p, c_uint64, c_uint64 * 62, c_int, POINTER(c_int))
