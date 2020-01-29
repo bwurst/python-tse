@@ -41,6 +41,7 @@ if len(sys.argv) > 1 and sys.argv[1] == '--info':
     print('Zahl der aktiven Clients: %i / %i' % (worm.info.registeredClients, worm.info.maxRegisteredClients))
     print('Zertifikat-Ablaufdatum:', worm.info.certificateExpirationDate)
     
+    print('Log-Time-Format:', worm.logTimeFormat())
     print('Hardware-Version: %i.%i.%i' % worm.info.hardwareVersion)
     print('Software-Version: %i.%i.%i' % worm.info.softwareVersion)
     print('Library-Version:', worm.getVersion())
@@ -74,10 +75,13 @@ if len(sys.argv) > 1 and sys.argv[1] == '--trxstart':
     num = response.transactionNumber
     print(num)
     print(response.signatureCounter)
+    print(response.logTime)
     response = worm.transaction_update(num, 'processdata2'.encode('ascii'), 'Bestellung-V1')
     print(response.signatureCounter)
+    print(response.logTime)
     response = worm.transaction_finish(num, 'processdata3'.encode('ascii'), 'Bestellung-V1')
     print(response.signatureCounter)
+    print(response.logTime)
     print(base64_encode(response.signature))
 
 
@@ -92,6 +96,9 @@ if len(sys.argv) > 1 and sys.argv[1] == '--trxfinishall':
         
 if len(sys.argv) > 2 and sys.argv[1] == '--export-tar':
     worm.export_tar(sys.argv[2])
+
+if len(sys.argv) > 2 and sys.argv[1] == '--export-tar-inc':
+    print('newState:', bytes(worm.export_tar_incremental(sys.argv[2])).hex())
 
 if len(sys.argv) > 1 and sys.argv[1] == '--cert':
     print(worm.getLogMessageCertificate().decode())

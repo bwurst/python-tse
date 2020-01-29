@@ -74,11 +74,16 @@ class Worm:
         # liefert bytes. Wir konvertieren als latin1, da es da keine UnicodeDecodeErrors geben kann.
         return ret.decode('latin1')
 
+    def logTimeFormat(self):
+        self.wormlib.worm_logTimeFormat.restype = c_char_p
+        ret = self.wormlib.worm_logTimeFormat()
+        return ret.decode('latin1')
+
 
     def signatureAlgorithm(self):
         self.wormlib.worm_signatureAlgorithm.restype = c_char_p
         ret = self.wormlib.worm_signatureAlgorithm()
-        return ret.decode('utf-8')
+        return ret.decode('latin1')
 
     ####################################################################
     # TSE-Configuration
@@ -212,6 +217,7 @@ class Worm:
         return r
         
     def transaction_listStartedTransactions(self, skip=0):
+        self.__pre_transaction_checks()
         numbers_buffer = (c_uint64 * 62)()
         count = c_int()
         self.wormlib.worm_transaction_listStartedTransactions.argtypes = (WormContext, c_char_p, c_uint64, c_uint64 * 62, c_int, POINTER(c_int))
@@ -257,8 +263,30 @@ class Worm:
                 self.wormlib.worm_export_tar(self.ctx, callback, None)
     
     
+    def export_tar_incremental(self, filename, lastState=None):
+        '''inkrementeller export
+        returns (firstSignatureCounter, lastSignatureCounter, newState)
+        newState muss beim nächsten inkrementellen export als lastState übergeben werden.'''
+        CALLBACK = CFUNCTYPE(c_int, POINTER(c_char), c_uint64, c_void_p)
+        callback = CALLBACK(self.export_tar_callback)
+        with open(filename, 'wb') as self.tarfile:
+            firstSignatureCounter = c_uint64()
+            lastSignatureCounter = c_uint64()
+            last_state = None
+            last_state_len = 0
+            if lastState:
+                last_state = c_char_p(lastState)
+                last_state_len = c_int(len(lastState))
+            new_state = cast(create_string_buffer(WORM_EXPORT_TAR_INCREMENTAL_STATE_SIZE), c_char_p)
+            new_state_len = c_int(WORM_EXPORT_TAR_INCREMENTAL_STATE_SIZE)
+            self.wormlib.worm_export_tar_incremental(self.ctx, last_state, last_state_len, new_state, new_state_len, byref(firstSignatureCounter), byref(lastSignatureCounter), callback, None)
+            new_state = cast(new_state, POINTER(c_char))
+            return_state = string_at(new_state, new_state_len)
+            return (firstSignatureCounter.value, lastSignatureCounter.value, return_state)
+    
     def export_tar_callback(self, chunk, chunklen, data):
         chunk = cast(chunk, POINTER(c_char))
+        print('callback called for %i bytes' % chunklen)
         if not self.tarfile:
             # Sollte schon vorhanden sein, sonst Fehler
             return 1
