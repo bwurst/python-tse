@@ -5,6 +5,7 @@ import datetime
 from worminfo import Worm_Info
 from wormentry import Worm_Entry
 from wormtransactionresponse import Worm_Transaction_Response
+from wormexception import WormException, WormError_to_exception
 
 def find_mountpoint():
     # Lese alle gemounteten Laufwerke
@@ -24,6 +25,8 @@ class Worm:
     def __init__(self, clientid, mountpoint = None, time_admin_pin = None, library = None):
         self.time_admin_pin = time_admin_pin
         self.clientid = clientid
+        self.info = None
+        self.entry = None
         if not mountpoint:
             mountpoint = find_mountpoint()
         if not mountpoint:
@@ -40,10 +43,7 @@ class Worm:
         self.wormlib.worm_init.restype = WormError
         self.wormlib.worm_init.argtypes = (POINTER(WormContext), c_char_p)
         ret = self.wormlib.worm_init(byref(self.ctx), mountpoint.encode('utf-8'))
-
-        # FIXME: returncode auswerten
-        if ret != 0:
-            print('return code for worm_init() => ', ret)
+        WormError_to_exception(ret)
         
         self.entry = Worm_Entry(self)
         self.info = Worm_Info(self)
@@ -51,18 +51,17 @@ class Worm:
             raise RuntimeError('TSE ist unwiderruflich außer Betrieb gesetzt und kann nicht mehr benutzt werden!')
         elif self.info.initializationState == WORM_INIT_UNINITIALIZED:
             import warnings
-            warnings.warn(RuntimeWarning('TSE ist noch nicht initialisiert. Bitte zuerst initialisieren!'))
+            warnings.warn(Warning('TSE ist noch nicht initialisiert. Bitte zuerst initialisieren!'))
         
 
 
     def __del__(self):
         if self.info:
             del(self.info)
-        self.wormlib.worm_cleanup.restype = WormError
-        ret = self.wormlib.worm_cleanup(self.ctx)
-        # FIXME: returncode auswerten
-        if ret != 0:
-            print('return code for worm_cleanup() => ', ret)
+        if self.wormlib:
+            self.wormlib.worm_cleanup.restype = WormError
+            ret = self.wormlib.worm_cleanup(self.ctx)
+            WormError_to_exception(ret)
 
     ####################################################################
     # Library Information
@@ -93,7 +92,7 @@ class Worm:
         self.wormlib.worm_tse_factoryReset.restype = WormError
         self.wormlib.worm_tse_factoryReset.argtypes = (WormContext, )
         ret = self.wormlib.worm_tse_factoryReset(self.ctx)
-        # FIXME: Error handling
+        WormError_to_exception(ret)
         self.info.update()
         return ret
     
@@ -107,7 +106,7 @@ class Worm:
                                           adminpuk.encode('ascii'), len(adminpuk), adminpin.encode('ascii'), 
                                           len(adminpin), timeadminpin.encode('ascii'), len(timeadminpin), 
                                           self.clientid.encode('ascii'))
-        # FIXME: Error handling
+        WormError_to_exception(ret)
         self.info.update()
         return ret
     
@@ -116,6 +115,7 @@ class Worm:
         self.wormlib.worm_tse_runSelfTest.argtypes = (WormContext, c_char_p)
         self.wormlib.worm_tse_runSelfTest.restype = WormError
         ret = self.wormlib.worm_tse_runSelfTest(self.ctx, self.clientid.encode('ascii'))
+        WormError_to_exception(ret)
         self.info.update()
         return ret
         
@@ -125,6 +125,7 @@ class Worm:
         self.wormlib.worm_tse_updateTime.argtypes = (WormContext, c_uint64)
         self.wormlib.worm_tse_updateTime.restype = WormError
         ret = self.wormlib.worm_tse_updateTime(self.ctx, int(datetime.datetime.now().timestamp()))
+        WormError_to_exception(ret)
         self.info.update()
         return ret
         
@@ -138,23 +139,19 @@ class Worm:
         self.wormlib.worm_user_login.argtypes = (WormContext, c_int, c_char_p, c_int, POINTER(c_int))
         self.wormlib.worm_user_login.restype = WormError
         ret = self.wormlib.worm_user_login(self.ctx, WormUserId, pin, len(pin), byref(remainingRetries))
-
-        print('remainingRetries: ', remainingRetries.value)
-        print(ret)
+        WormError_to_exception(ret)
         self.info.update()
-        return ret
+        return remainingRetries.value
         
     def user_deriveInitialCredentials(self):
         seed = b'SwissbitSwissbit'
         adminpuk = c_char_p(b'xxxxxx')
         adminpin = c_char_p(b'xxxxx')
         timeadminpin = c_char_p(b'xxxxx')
-        
         self.wormlib.worm_user_deriveInitialCredentials.argtypes = (WormContext, c_char_p, c_int, c_char_p, c_int, c_char_p, c_int, c_char_p, c_int)
         self.wormlib.worm_user_deriveInitialCredentials.restype = WormError
         ret = self.wormlib.worm_user_deriveInitialCredentials(self.ctx, seed, len(seed), adminpuk, 6, adminpin, 5, timeadminpin, 5)
-        if ret != 0:
-            print(ret)
+        WormError_to_exception(ret)
         print('adminPUK:', adminpuk.value.decode('ascii'))
         print('adminPIN:', adminpin.value.decode('ascii'))
         print('timeadminPIN:', timeadminpin.value.decode('ascii'))
@@ -182,10 +179,7 @@ class Worm:
         self.wormlib.worm_transaction_start.restype = WormError
         ret = self.wormlib.worm_transaction_start(self.ctx, self.clientid.encode('ascii'), processdata, 
                                                   len(processdata), processtype.encode('ascii'), r.response)
-        if ret != 0:
-            print('transaction_start() =>', ret)
-        #print(self.wormlib.worm_transaction_response_transactionNumber(byref(r.response)))
-        # FIXME: return code / error handling
+        WormError_to_exception(ret)
         return r
 
         
@@ -196,10 +190,7 @@ class Worm:
         self.wormlib.worm_transaction_update.restype = WormError
         ret = self.wormlib.worm_transaction_update(self.ctx, self.clientid.encode('ascii'), transactionnumber, processdata, 
                                                   len(processdata), processtype.encode('ascii'), r.response)
-        if ret != 0:
-            print('transaction_update() =>', ret)
-        #print(self.wormlib.worm_transaction_response_transactionNumber(byref(r.response)))
-        # FIXME: return code / error handling
+        WormError_to_exception(ret)
         return r
         
     def transaction_finish(self, transactionnumber, processdata, processtype):
@@ -209,10 +200,7 @@ class Worm:
         self.wormlib.worm_transaction_finish.restype = WormError
         ret = self.wormlib.worm_transaction_finish(self.ctx, self.clientid.encode('ascii'), transactionnumber, processdata, 
                                                   len(processdata), processtype.encode('ascii'), r.response)
-        if ret != 0:
-            print('transaction_finish() =>', ret)
-        #print(self.wormlib.worm_transaction_response_transactionNumber(byref(r.response)))
-        # FIXME: return code / error handling
+        WormError_to_exception(ret)
         self.info.update()
         return r
         
@@ -223,8 +211,7 @@ class Worm:
         self.wormlib.worm_transaction_listStartedTransactions.argtypes = (WormContext, c_char_p, c_uint64, c_uint64 * 62, c_int, POINTER(c_int))
         self.wormlib.worm_transaction_listStartedTransactions.restype = WormError
         ret = self.wormlib.worm_transaction_listStartedTransactions(self.ctx, self.clientid.encode('ascii'), skip, numbers_buffer, 62, byref(count))
-        if ret != 0:
-            print('transaction_listStartedTransactions() =>', ret)
+        WormError_to_exception(ret)
         return numbers_buffer[:count.value]
             
         
@@ -238,8 +225,7 @@ class Worm:
         sLength = c_uint64(1024*1024) # 1 MB
         self.wormlib.worm_getLogMessageCertificate.argtypes = (WormContext, POINTER(c_char * 1024*1024), POINTER(c_uint64))
         res = self.wormlib.worm_getLogMessageCertificate(self.ctx, buffer, byref(sLength))
-        if res != 0:
-            print('getLogMessageCertificate() =>', res)
+        WormError_to_exception(res)
         s = cast(buffer, POINTER(c_char))
         ret = string_at(s, size=sLength.value)
         return ret
@@ -254,13 +240,16 @@ class Worm:
                     time_end = int(time_start.timestamp())
                 assert type(time_start) == int
                 assert type(time_end) == int
-                self.wormlib.worm_export_tar_filtered_time(self.ctx, c_uint64(time_start), c_uint64(time_end), c_char_p(clientid), callback, None)
+                ret = self.wormlib.worm_export_tar_filtered_time(self.ctx, c_uint64(time_start), c_uint64(time_end), c_char_p(clientid), callback, None)
+                WormError_to_exception(ret)
             elif trxid_start:
                 assert type(trxid_start) == int
                 assert type(trxid_end) == int
-                self.wormlib.worm_export_tar_filtered_transaction(self.ctx, c_uint64(trxid_start), c_uint64(trxid_end), c_char_p(clientid), callback, None)
+                ret = self.wormlib.worm_export_tar_filtered_transaction(self.ctx, c_uint64(trxid_start), c_uint64(trxid_end), c_char_p(clientid), callback, None)
+                WormError_to_exception(ret)
             else:
-                self.wormlib.worm_export_tar(self.ctx, callback, None)
+                ret = self.wormlib.worm_export_tar(self.ctx, callback, None)
+                WormError_to_exception(ret)
     
     
     def export_tar_incremental(self, filename, lastState=None):
@@ -279,14 +268,14 @@ class Worm:
                 last_state_len = c_int(len(lastState))
             new_state = cast(create_string_buffer(WORM_EXPORT_TAR_INCREMENTAL_STATE_SIZE), c_char_p)
             new_state_len = c_int(WORM_EXPORT_TAR_INCREMENTAL_STATE_SIZE)
-            self.wormlib.worm_export_tar_incremental(self.ctx, last_state, last_state_len, new_state, new_state_len, byref(firstSignatureCounter), byref(lastSignatureCounter), callback, None)
+            ret = self.wormlib.worm_export_tar_incremental(self.ctx, last_state, last_state_len, new_state, new_state_len, byref(firstSignatureCounter), byref(lastSignatureCounter), callback, None)
+            WormError_to_exception(ret)
             new_state = cast(new_state, POINTER(c_char))
             return_state = string_at(new_state, new_state_len)
             return (firstSignatureCounter.value, lastSignatureCounter.value, return_state)
     
     def export_tar_callback(self, chunk, chunklen, data):
         chunk = cast(chunk, POINTER(c_char))
-        print('callback called for %i bytes' % chunklen)
         if not self.tarfile:
             # Sollte schon vorhanden sein, sonst Fehler
             return 1
