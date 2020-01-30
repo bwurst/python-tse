@@ -11,7 +11,7 @@ Im Programm **cli/test.py** befinden sich Anwendungsbeispiele für die Nutzung a
 
 Zum Zugriff auf das TSE-Modul ist eine "Client-ID" nötig, die das Kassensystem identifiziert. Das kann ein beliebiger Freitext sein, also alphanumerisch. Intern wird dieser String als "latin1" codiert. Es wird dringend empfohlen, sich auf die einfachen ASCII-Zeichen zu beschränken. Das TSE-Modul kann mehrere Client-IDs verwalten und parallel betreiben, das ist in dieser Bibliothek aber nicht implementiert.
 
-Das Modul kennt 5 Zugangsdaten: Admin-PIN (5-stellig, für Aktivierung/Deaktivierung und ähnliches), Time-Admin-PIN (5-stelling, zum aktualisieren der Zeit) und Admin-PUK (6-stellig) um die anderen PINs wieder freizuschalten. Die Zeit muss regelmäßig (ca. alle halbe Stunde) neu gesetzt werden, daher muss diese PIN im Regelbetrieb zur Verfügung stehen. 
+Das Modul kennt 3 Zugangsdaten: Admin-PIN (5-stellig, für Aktivierung/Deaktivierung und ähnliches), Time-Admin-PIN (5-stelling, zum aktualisieren der Zeit) und Admin-PUK (6-stellig) um die anderen PINs wieder freizuschalten. Die Zeit muss regelmäßig (ca. alle halbe Stunde) neu gesetzt werden, daher muss diese PIN im Regelbetrieb zur Verfügung stehen. 
 
 Ein Ablauf könnte so aussehen:
 
