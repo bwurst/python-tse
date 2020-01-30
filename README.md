@@ -11,7 +11,8 @@ Im Programm **cli/test.py** befinden sich Anwendungsbeispiele für die Nutzung a
 
 Zum Zugriff auf das TSE-Modul ist eine "Client-ID" nötig, die das Kassensystem identifiziert. Das kann ein beliebiger Freitext sein, also alphanumerisch. Intern wird dieser String als "latin1" codiert. Es wird dringend empfohlen, sich auf die einfachen ASCII-Zeichen zu beschränken. Das TSE-Modul kann mehrere Client-IDs verwalten und parallel betreiben, das ist in dieser Bibliothek aber nicht implementiert.
 
-Das Modul kennt 3 Zugangsdaten: Admin-PIN (5-stellig, für Aktivierung/Deaktivierung und ähnliches), Time-Admin-PIN (5-stelling, zum aktualisieren der Zeit) und Admin-PUK (6-stellig) um die anderen PINs wieder freizuschalten. Die Zeit muss regelmäßig (ca. alle halbe Stunde) neu gesetzt werden, daher muss diese PIN im Regelbetrieb zur Verfügung stehen. 
+Das Modul kennt 3 Zugangsdaten: Admin-PIN (5-stellig, für Aktivierung/Deaktivierung und ähnliches), Time-Admin-PIN (5-stelling, zum aktualisieren der Zeit) und Admin-PUK (6-stellig) um die anderen PINs wieder freizuschalten. Die Zeit muss regelmäßig (ca. alle halbe Stunde) neu gesetzt werden, daher muss diese PIN im Regelbetrieb zur Verfügung stehen. Die PINs können alphanumerisch sein aber es sollte sich konsequent um 1-Byte-Zeichen handeln, da die Länge der PINs in Bytes fest ist.
+
 
 Ein Ablauf könnte so aussehen:
 
@@ -39,7 +40,10 @@ Vor der allerersten Nutzung muss die TSE initialisiert werden. Ob dies nötig is
 if tse.info.initializationState == worm.WORM_INIT_UNINITIALIZED:
 	tse.tse_setup('SwissbitSwissbit', adminpuk=ADMIN_PUK, adminpin=ADMIN_PIN, timeadminpin=TIME_ADMIN_PIN)
 ```
-Die PINs und die PUK müssen dabei alle vom Anwendungssystem bereitgestellt werden. Die Client-ID sollte bereits im Konstruktor übergeben worden sein und wird aus diesem verwendet.
+
+Der erste Parameter "credentialseed" muss nach derzeitigen Informationen immer der feste String 'SwissbitSwissbit' sein.
+Die PINs und die PUK müssen alle vom Anwendungssystem bereitgestellt werden. Datentyp kann bytes oder string sein.
+Die Client-ID sollte bereits im Konstruktor übergeben worden sein und wird aus diesem verwendet.
 
 Die Swissbit-Bibliothek unterstützt einige Kommandos um die Initialisierung einzeln vorzunehmen. Diese sind hier nicht implementiert, da alles mit einem einzigen Aufruf von tse_setup() erledigt wird. 
 

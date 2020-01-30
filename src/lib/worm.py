@@ -1,7 +1,7 @@
 import os.path
+import datetime
 from ctypes import *
 from wormtypes import *
-import datetime
 from worminfo import Worm_Info
 from wormentry import Worm_Entry
 from wormtransactionresponse import Worm_Transaction_Response
@@ -106,11 +106,24 @@ class Worm:
             except WormException:
                 # Dieser Self-Test schlägt fehl, das ist so by design.
                 pass
+        if type(credentialseed) == str:
+            credentialseed = credentialseed.encode('latin1')
+        if type(adminpuk) == str:
+            adminpuk = adminpuk.encode('latin1')
+        if len(adminpuk) != 6:
+            raise ValueError('Admin-PUK muss genau 6 Stellen lang sein')
+        if type(adminpin) == str:
+            adminpin = adminpin.encode('latin1')
+        if len(adminpin) != 5:
+            raise ValueError('Admin-PIN muss genau 5 Stellen lang sein')
+        if type(timeadminpin) == str:
+            timeadminpin = timeadminpin.encode('latin1')
+        if len(timeadminpin) != 5:
+            raise ValueError('Time-Admin-PIN muss genau 5 Stellen lang sein')
         self.wormlib.worm_tse_setup.restype = WormError
         self.wormlib.worm_tse_setup.argtypes = (WormContext, c_char_p, c_int, c_char_p, c_int, c_char_p, c_int, c_char_p, c_int, c_char_p)
-        ret = self.wormlib.worm_tse_setup(self.ctx, credentialseed.encode('latin1'), len(credentialseed), 
-                                          adminpuk.encode('latin1'), len(adminpuk), adminpin.encode('latin1'), 
-                                          len(adminpin), timeadminpin.encode('latin1'), len(timeadminpin), 
+        ret = self.wormlib.worm_tse_setup(self.ctx, credentialseed, len(credentialseed), 
+                                          adminpuk, len(adminpuk), adminpin, len(adminpin), timeadminpin, len(timeadminpin), 
                                           self.clientid.encode('latin1'))
         WormError_to_exception(ret)
         self.info.update()
