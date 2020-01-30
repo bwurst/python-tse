@@ -98,14 +98,20 @@ class Worm:
     
     def tse_setup(self, credentialseed, adminpuk, adminpin, timeadminpin):
         if self.info.initializationState == WORM_INIT_INITIALIZED:
-            print('initialization ist schon erfolgt!')
-            return False
+            raise WormException('initialization ist schon erfolgt!')
+        if not self.info.hasPassedSelfTest:
+            # Es muss mindestens ein SelfTest gemacht werden vor dem setup.
+            try:
+                self.tse_runSelfTest()
+            except WormException:
+                # Dieser Self-Test schlägt fehl, das ist so by design.
+                pass
         self.wormlib.worm_tse_setup.restype = WormError
         self.wormlib.worm_tse_setup.argtypes = (WormContext, c_char_p, c_int, c_char_p, c_int, c_char_p, c_int, c_char_p, c_int, c_char_p)
-        ret = self.wormlib.worm_tse_setup(self.ctx, credentialseed.encode('ascii'), len(credentialseed), 
-                                          adminpuk.encode('ascii'), len(adminpuk), adminpin.encode('ascii'), 
-                                          len(adminpin), timeadminpin.encode('ascii'), len(timeadminpin), 
-                                          self.clientid.encode('ascii'))
+        ret = self.wormlib.worm_tse_setup(self.ctx, credentialseed.encode('latin1'), len(credentialseed), 
+                                          adminpuk.encode('latin1'), len(adminpuk), adminpin.encode('latin1'), 
+                                          len(adminpin), timeadminpin.encode('latin1'), len(timeadminpin), 
+                                          self.clientid.encode('latin1'))
         WormError_to_exception(ret)
         self.info.update()
         return ret
@@ -114,7 +120,7 @@ class Worm:
     def tse_runSelfTest(self):
         self.wormlib.worm_tse_runSelfTest.argtypes = (WormContext, c_char_p)
         self.wormlib.worm_tse_runSelfTest.restype = WormError
-        ret = self.wormlib.worm_tse_runSelfTest(self.ctx, self.clientid.encode('ascii'))
+        ret = self.wormlib.worm_tse_runSelfTest(self.ctx, self.clientid.encode('latin1'))
         WormError_to_exception(ret)
         self.info.update()
         return ret
@@ -133,7 +139,7 @@ class Worm:
         
     def user_login(self, userid, pin):
         WormUserId = userid # WORM_USER_ADMIN
-        pin = pin.encode('ascii')
+        pin = pin.encode('latin1')
         remainingRetries = c_int()
         
         self.wormlib.worm_user_login.argtypes = (WormContext, c_int, c_char_p, c_int, POINTER(c_int))
@@ -152,10 +158,10 @@ class Worm:
         self.wormlib.worm_user_deriveInitialCredentials.restype = WormError
         ret = self.wormlib.worm_user_deriveInitialCredentials(self.ctx, seed, len(seed), adminpuk, 6, adminpin, 5, timeadminpin, 5)
         WormError_to_exception(ret)
-        print('adminPUK:', adminpuk.value.decode('ascii'))
-        print('adminPIN:', adminpin.value.decode('ascii'))
-        print('timeadminPIN:', timeadminpin.value.decode('ascii'))
-        return (adminpuk.value.decode('ascii'), adminpin.value.decode('ascii'), timeadminpin.value.decode('ascii'))
+        print('adminPUK:', adminpuk.value.decode('latin1'))
+        print('adminPIN:', adminpin.value.decode('latin1'))
+        print('timeadminPIN:', timeadminpin.value.decode('latin1'))
+        return (adminpuk.value.decode('latin1'), adminpin.value.decode('latin1'), timeadminpin.value.decode('latin1'))
         
         
     ####################################################################
@@ -174,32 +180,50 @@ class Worm:
         
     def transaction_start(self, processdata, processtype):
         self.__pre_transaction_checks()
+        if type(processdata) == str:
+            processdata = processdata.encode('latin1')
+        if type(processtype) == str:
+            processtype = processtype.encode('latin1')
+        assert type(processdata) == bytes, 'processdata ist kein byte-string'
+        assert type(processtype) == bytes, 'processtype ist kein byte-string'
         r = Worm_Transaction_Response(self)
         self.wormlib.worm_transaction_start.argtypes = (WormContext, c_char_p, c_char_p, c_int, c_char_p, WormTransactionResponse)
         self.wormlib.worm_transaction_start.restype = WormError
-        ret = self.wormlib.worm_transaction_start(self.ctx, self.clientid.encode('ascii'), processdata, 
-                                                  len(processdata), processtype.encode('ascii'), r.response)
+        ret = self.wormlib.worm_transaction_start(self.ctx, self.clientid.encode('latin1'), processdata, 
+                                                  len(processdata), processtype, r.response)
         WormError_to_exception(ret)
         return r
 
         
     def transaction_update(self, transactionnumber, processdata, processtype):
         self.__pre_transaction_checks()
+        if type(processdata) == str:
+            processdata = processdata.encode('latin1')
+        if type(processtype) == str:
+            processtype = processtype.encode('latin1')
+        assert type(processdata) == bytes, 'processdata ist kein byte-string'
+        assert type(processtype) == bytes, 'processtype ist kein byte-string'
         r = Worm_Transaction_Response(self)
         self.wormlib.worm_transaction_update.argtypes = (WormContext, c_char_p, c_uint64, c_char_p, c_int, c_char_p, WormTransactionResponse)
         self.wormlib.worm_transaction_update.restype = WormError
-        ret = self.wormlib.worm_transaction_update(self.ctx, self.clientid.encode('ascii'), transactionnumber, processdata, 
-                                                  len(processdata), processtype.encode('ascii'), r.response)
+        ret = self.wormlib.worm_transaction_update(self.ctx, self.clientid.encode('latin1'), transactionnumber, processdata, 
+                                                  len(processdata), processtype, r.response)
         WormError_to_exception(ret)
         return r
         
     def transaction_finish(self, transactionnumber, processdata, processtype):
         self.__pre_transaction_checks()
+        if type(processdata) == str:
+            processdata = processdata.encode('latin1')
+        if type(processtype) == str:
+            processtype = processtype.encode('latin1')
+        assert type(processdata) == bytes, 'processdata ist kein byte-string'
+        assert type(processtype) == bytes, 'processtype ist kein byte-string'
         r = Worm_Transaction_Response(self)
         self.wormlib.worm_transaction_finish.argtypes = (WormContext, c_char_p, c_uint64, c_char_p, c_int, c_char_p, WormTransactionResponse)
         self.wormlib.worm_transaction_finish.restype = WormError
-        ret = self.wormlib.worm_transaction_finish(self.ctx, self.clientid.encode('ascii'), transactionnumber, processdata, 
-                                                  len(processdata), processtype.encode('ascii'), r.response)
+        ret = self.wormlib.worm_transaction_finish(self.ctx, self.clientid.encode('latin1'), transactionnumber, processdata, 
+                                                  len(processdata), processtype, r.response)
         WormError_to_exception(ret)
         self.info.update()
         return r
@@ -210,7 +234,7 @@ class Worm:
         count = c_int()
         self.wormlib.worm_transaction_listStartedTransactions.argtypes = (WormContext, c_char_p, c_uint64, c_uint64 * 62, c_int, POINTER(c_int))
         self.wormlib.worm_transaction_listStartedTransactions.restype = WormError
-        ret = self.wormlib.worm_transaction_listStartedTransactions(self.ctx, self.clientid.encode('ascii'), skip, numbers_buffer, 62, byref(count))
+        ret = self.wormlib.worm_transaction_listStartedTransactions(self.ctx, self.clientid.encode('latin1'), skip, numbers_buffer, 62, byref(count))
         WormError_to_exception(ret)
         return numbers_buffer[:count.value]
             

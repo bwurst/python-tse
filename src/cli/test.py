@@ -56,8 +56,6 @@ if len(sys.argv) > 1 and sys.argv[1] == '--selftest':
     myworm.tse_runSelfTest()
 
 if len(sys.argv) > 1 and sys.argv[1] == '--setup':
-    if not myworm.info.hasPassedSelfTest:
-        myworm.tse_runSelfTest()
     myworm.tse_setup('SwissbitSwissbit', config.PUK, config.PIN, config.PIN_TIME_ADMIN)
 
 if len(sys.argv) > 1 and sys.argv[1] == '--time':
@@ -71,7 +69,7 @@ if len(sys.argv) > 1 and sys.argv[1] == '--initcreds':
 
 
 if len(sys.argv) > 1 and sys.argv[1] == '--trxstart':
-    response = myworm.transaction_start('processdata'.encode('ascii'), 'Bestellung-V1')
+    response = myworm.transaction_start('processdata', 'Bestellung-V1')
     num = response.transactionNumber
     print(num)
     print(response.signatureCounter)
