@@ -30,11 +30,11 @@ class Worm:
         if not mountpoint:
             mountpoint = find_mountpoint()
         if not mountpoint:
-            raise RuntimeError('Cannot find TSE unit!')
+            raise WormException(WORM_ERROR_NO_WORM_CARD, 'Cannot find TSE unit!')
         if not library:
             library = os.path.abspath(os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../so/libWormAPI.so'))
         if not os.path.exists(library):
-            raise RuntimeError('Cannot find TSE / SMAERS library. Was expected as %s' % library)
+            raise WormException(WORM_ERROR_UNKNOWN, 'Cannot find TSE / SMAERS library. Was expected as %s' % library)
         self.wormlib = cdll.LoadLibrary(library)
 
         self.ctx = WormContext()
@@ -48,7 +48,7 @@ class Worm:
         self.entry = Worm_Entry(self)
         self.info = Worm_Info(self)
         if self.info.initializationState == WORM_INIT_DECOMMISSIONED:
-            raise RuntimeError('TSE ist unwiderruflich außer Betrieb gesetzt und kann nicht mehr benutzt werden!')
+            raise WormException(WORM_ERROR_TSE_DECOMMISSIONED, 'TSE ist unwiderruflich außer Betrieb gesetzt und kann nicht mehr benutzt werden!')
         elif self.info.initializationState == WORM_INIT_UNINITIALIZED:
             import warnings
             warnings.warn(Warning('TSE ist noch nicht initialisiert. Bitte zuerst initialisieren!'))
@@ -98,7 +98,7 @@ class Worm:
     
     def tse_setup(self, credentialseed, adminpuk, adminpin, timeadminpin):
         if self.info.initializationState == WORM_INIT_INITIALIZED:
-            raise WormException('initialization ist schon erfolgt!')
+            raise WormException(WORM_ERROR_UNKNOWN, 'initialization ist schon erfolgt!')
         if not self.info.hasPassedSelfTest:
             # Es muss mindestens ein SelfTest gemacht werden vor dem setup.
             try:
@@ -188,7 +188,7 @@ class Worm:
         if not self.info.hasValidTime:
             self.tse_updateTime()
         if not self.info.isCtssInterfaceActive:
-            raise RuntimeError('TSE not ready!')
+            raise WormException(WORM_ERROR_WRONG_STATE_NEEDS_ACTIVE_CTSS, 'TSE not ready!')
 
         
     def transaction_start(self, processdata, processtype):
