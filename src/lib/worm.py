@@ -96,18 +96,36 @@ class Worm:
         self.info.update()
         return ret
     
-    def tse_setup(self, credentialseed, adminpuk, adminpin, timeadminpin):
+    def tse_prepare(self, adminpuk, adminpin, time_admin_pin = None):
+        '''Kann beim Programmstart aufgerufen werden und kümmert sich um 
+        tse_setup() bei Bedarf oder richtet die clientid ein'''
+        if not time_admin_pin:
+            time_admin_pin = self.time_admin_pin
+        if self.info.initializationState == WORM_INIT_UNINITIALIZED:
+            self.tse_setup(adminpuk, adminpin, time_admin_pin)
+            self.tse_updateTime()
+        if not self.info.hasPassedSelfTest:
+            self.tse_runSelfTest()
+            self.tse_updateTime()
+        self.user_login(WORM_USER_ADMIN, adminpin)
+        clients = self.tse_listRegisteredClients()
+        if self.clientid not in clients:
+            self.tse_registerClient(adminpin = adminpin)
+        self.user_logout(WORM_USER_ADMIN)
+        if not self.info.hasValidTime:
+            self.tse_updateTime()
+    
+    
+    def tse_setup(self, adminpuk, adminpin, timeadminpin):
         if self.info.initializationState == WORM_INIT_INITIALIZED:
             raise WormException(WORM_ERROR_UNKNOWN, 'initialization ist schon erfolgt!')
-        if not self.info.hasPassedSelfTest:
-            # Es muss mindestens ein SelfTest gemacht werden vor dem setup.
-            try:
-                self.tse_runSelfTest()
-            except WormException:
-                # Dieser Self-Test schlägt fehl, das ist so by design.
-                pass
-        if type(credentialseed) == str:
-            credentialseed = credentialseed.encode('latin1')
+        # Es muss mindestens ein SelfTest gemacht werden vor dem setup.
+        try:
+            self.tse_runSelfTest()
+        except WormException:
+            # Dieser Self-Test schlägt fehl, das ist by design.
+            pass
+        credentialseed = b'SwissbitSwissbit'
         if type(adminpuk) == str:
             adminpuk = adminpuk.encode('latin1')
         if len(adminpuk) != 6:
@@ -148,19 +166,58 @@ class Worm:
         self.info.update()
         return ret
         
+    def tse_listRegisteredClients(self):
+        skip = 0
+        clients = []
+        while True:
+            _clients = WormRegisteredClients()
+            self.wormlib.worm_tse_listRegisteredClients.argtypes = (WormContext, c_int, POINTER(WormRegisteredClients))
+            ret = self.wormlib.worm_tse_listRegisteredClients(self.ctx, skip, _clients)
+            WormError_to_exception(ret)
+            data = False
+            for entry in _clients.clientIds:
+                id = cast(entry, c_char_p).value.decode('latin1')
+                if id:
+                    clients.append(id)
+                    data = True
+            if len(clients) >= _clients.amount or not data:
+                break
+            skip += 16
+        return clients 
     
+    def tse_registerClient(self, clientid = None, adminpin = None):
+        if not clientid:
+            clientid = self.clientid
+        if adminpin:
+            self.user_login(WORM_USER_ADMIN, adminpin)
+        self.wormlib.worm_tse_registerClient.argtypes = (WormContext, c_char_p)
+        ret = self.wormlib.worm_tse_registerClient(self.ctx, clientid.encode('latin1'))
+        WormError_to_exception(ret)
+        
+    def tse_deregisterClient(self, clientid = None):
+        if not clientid:
+            clientid = self.clientid
+        self.wormlib.worm_tse_deregisterClient.argtypes = (WormContext, c_char_p)
+        ret = self.wormlib.worm_tse_deregisterClient(self.ctx, clientid.encode('latin1'))
+        WormError_to_exception(ret)
         
     def user_login(self, userid, pin):
-        WormUserId = userid # WORM_USER_ADMIN
         pin = pin.encode('latin1')
         remainingRetries = c_int()
         
         self.wormlib.worm_user_login.argtypes = (WormContext, c_int, c_char_p, c_int, POINTER(c_int))
         self.wormlib.worm_user_login.restype = WormError
-        ret = self.wormlib.worm_user_login(self.ctx, WormUserId, pin, len(pin), byref(remainingRetries))
+        ret = self.wormlib.worm_user_login(self.ctx, userid, pin, len(pin), byref(remainingRetries))
         WormError_to_exception(ret)
         self.info.update()
         return remainingRetries.value
+        
+    def user_logout(self, userid):
+        self.wormlib.worm_user_logout.argtypes = (WormContext, c_int)
+        self.wormlib.worm_user_logout.restype = WormError
+        ret = self.wormlib.worm_user_logout(self.ctx, userid)
+        WormError_to_exception(ret)
+        self.info.update()
         
     def user_deriveInitialCredentials(self):
         seed = b'SwissbitSwissbit'

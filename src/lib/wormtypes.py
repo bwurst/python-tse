@@ -1,4 +1,4 @@
-from ctypes import c_void_p, c_int, c_uint64
+from ctypes import c_void_p, c_int, c_char, c_uint64, Structure
 
 WormContext = c_void_p
 WormInfo = c_void_p
@@ -7,6 +7,11 @@ WormTransactionResponse = c_void_p
 
 WormError = c_int
 
+class WormRegisteredClients(Structure):
+    _fields_ = [
+        ("amount", c_int),
+        ("clientIds", (c_char * 31) * 16),
+        ]
 
 
 
