@@ -105,13 +105,15 @@ class Worm:
             self.tse_setup(adminpuk, adminpin, time_admin_pin)
             self.tse_updateTime()
         if not self.info.hasPassedSelfTest:
-            self.tse_runSelfTest()
-            self.tse_updateTime()
-        self.user_login(WORM_USER_ADMIN, adminpin)
-        clients = self.tse_listRegisteredClients()
-        if self.clientid not in clients:
-            self.tse_registerClient(adminpin = adminpin)
-        self.user_logout(WORM_USER_ADMIN)
+            try:
+                self.tse_runSelfTest()
+            except WormException as e:
+                if e.errno == WORM_ERROR_CLIENT_NOT_REGISTERED:
+                    self.user_login(WORM_USER_ADMIN, adminpin)
+                    self.tse_registerClient(adminpin = adminpin)
+                    self.user_logout(WORM_USER_ADMIN)
+                # self-test nochmal ausführen. Schlägt dieser nochmal fehl, wird die exception durchgereicht.
+                self.tse_runSelfTest()
         if not self.info.hasValidTime:
             self.tse_updateTime()
     
