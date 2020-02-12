@@ -253,9 +253,9 @@ class Worm:
     def transaction_start(self, processdata, processtype):
         self.__pre_transaction_checks()
         if type(processdata) == str:
-            processdata = processdata.encode('latin1')
+            processdata = processdata.encode('utf-8')
         if type(processtype) == str:
-            processtype = processtype.encode('latin1')
+            processtype = processtype.encode('utf-8')
         assert type(processdata) == bytes, 'processdata ist kein byte-string'
         assert type(processtype) == bytes, 'processtype ist kein byte-string'
         r = Worm_Transaction_Response(self)
@@ -270,9 +270,9 @@ class Worm:
     def transaction_update(self, transactionnumber, processdata, processtype):
         self.__pre_transaction_checks()
         if type(processdata) == str:
-            processdata = processdata.encode('latin1')
+            processdata = processdata.encode('utf-8')
         if type(processtype) == str:
-            processtype = processtype.encode('latin1')
+            processtype = processtype.encode('utf-8')
         assert type(processdata) == bytes, 'processdata ist kein byte-string'
         assert type(processtype) == bytes, 'processtype ist kein byte-string'
         r = Worm_Transaction_Response(self)
@@ -286,9 +286,9 @@ class Worm:
     def transaction_finish(self, transactionnumber, processdata, processtype):
         self.__pre_transaction_checks()
         if type(processdata) == str:
-            processdata = processdata.encode('latin1')
+            processdata = processdata.encode('utf-8')
         if type(processtype) == str:
-            processtype = processtype.encode('latin1')
+            processtype = processtype.encode('utf-8')
         assert type(processdata) == bytes, 'processdata ist kein byte-string'
         assert type(processtype) == bytes, 'processtype ist kein byte-string'
         r = Worm_Transaction_Response(self)
