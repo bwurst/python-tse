@@ -1,11 +1,14 @@
 import os.path
 import datetime
+import logging
 from ctypes import *
 from wormtypes import *
 from worminfo import Worm_Info
 from wormentry import Worm_Entry
 from wormtransactionresponse import Worm_Transaction_Response
 from wormexception import WormException, WormError_to_exception
+
+log = logging.getLogger('worm')
 
 def find_mountpoint():
     # Lese alle gemounteten Laufwerke
@@ -15,6 +18,7 @@ def find_mountpoint():
             dir = line.split(' ')[1]
             # Teste, ob die Datei vorhanden ist. Erster Treffer wird zurückgegeben.
             if os.path.exists(os.path.join(dir, 'TSE_COMM.DAT')):
+                log.info('found TSE unit at %s' % (dir,))
                 return dir
     return None
 
@@ -23,39 +27,56 @@ class Worm:
     wormlib = None
 
     def __init__(self, clientid, mountpoint = None, time_admin_pin = None, library = None):
+        log.setLevel(logging.DEBUG)
         self.time_admin_pin = time_admin_pin
         self.clientid = clientid
-        self.info = None
         self.entry = None
-        if not mountpoint:
-            mountpoint = find_mountpoint()
-        if not mountpoint:
-            raise WormException(WORM_ERROR_NO_WORM_CARD, 'Cannot find TSE unit!')
+        self.mountpoint = mountpoint
         if not library:
             library = os.path.abspath(os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../so/libWormAPI.so'))
         if not os.path.exists(library):
+            log.critical('cannot find TSE / SMAERS library on this location: %s' % (library,))
             raise WormException(WORM_ERROR_UNKNOWN, 'Cannot find TSE / SMAERS library. Was expected as %s' % library)
+        log.debug('using TSE / SMAERS library at %s' % library)
         self.wormlib = cdll.LoadLibrary(library)
-
         self.ctx = WormContext()
+        self.entry = Worm_Entry(self)
         self.info = None
+        try:
+            self.setup()
+        except:
+            log.error('TSE: Exception occured whilst initializing TSE. Possibly no module present?!')
+            pass
+
+    def setup(self, mountpoint = None):
+        # Hier können Laufzeitfehler auftreten, wenn die TSE nicht vorhanden ist!
+        if not mountpoint:
+            mountpoint = self.mountpoint
+        if not mountpoint:
+            mountpoint = find_mountpoint()
+        if not mountpoint:
+            log.error('cannot find TSE unit on any mount path')
+            raise WormException(WORM_ERROR_NO_WORM_CARD, 'Cannot find TSE unit!')
 
         self.wormlib.worm_init.restype = WormError
         self.wormlib.worm_init.argtypes = (POINTER(WormContext), c_char_p)
+        log.debug('call worm_init()')
         ret = self.wormlib.worm_init(byref(self.ctx), mountpoint.encode('utf-8'))
         WormError_to_exception(ret)
-        
-        self.entry = Worm_Entry(self)
+
         self.info = Worm_Info(self)
+        
         if self.info.initializationState == WORM_INIT_DECOMMISSIONED:
+            log.critical('this TSE unit is out of order / decommissioned permanently!')
             raise WormException(WORM_ERROR_TSE_DECOMMISSIONED, 'TSE ist unwiderruflich außer Betrieb gesetzt und kann nicht mehr benutzt werden!')
         elif self.info.initializationState == WORM_INIT_UNINITIALIZED:
+            log.warning('this TSE module is not yet set up! Please initialize!')
             import warnings
             warnings.warn(Warning('TSE ist noch nicht initialisiert. Bitte zuerst initialisieren!'))
         
 
-
     def __del__(self):
+        log.debug('TSE library is about to be shut down')
         if self.info:
             del(self.info)
         if self.wormlib:
@@ -101,14 +122,20 @@ class Worm:
         tse_setup() bei Bedarf oder richtet die clientid ein'''
         if not time_admin_pin:
             time_admin_pin = self.time_admin_pin
+        if not self.info:
+            log.info('not yet initialized.')
+            self.setup()
         if self.info.initializationState == WORM_INIT_UNINITIALIZED:
+            log.warning('TSE still not commissioned, calling tse_setup()')
             self.tse_setup(adminpuk, adminpin, time_admin_pin)
             self.tse_updateTime()
         if not self.info.hasPassedSelfTest:
             try:
+                log.info('running selfTest()')
                 self.tse_runSelfTest()
             except WormException as e:
                 if e.errno == WORM_ERROR_CLIENT_NOT_REGISTERED:
+                    log.info('client not registered, calling registerClient()')
                     self.user_login(WORM_USER_ADMIN, adminpin)
                     self.tse_registerClient(adminpin = adminpin)
                     self.user_logout(WORM_USER_ADMIN)

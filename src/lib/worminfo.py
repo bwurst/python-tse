@@ -17,7 +17,8 @@ class Worm_Info:
         
     def update(self):
         ret = self.wormlib.worm_info_read(self.info)
-        # FIXME: Error handling
+        #WormError_to_exception(ret)
+        #Wenn wir hier eine Exception ausgeben, bricht das an manchen Stellen, falls die TSE nicht angesteckt ist...
 
 
     def __del__(self):
