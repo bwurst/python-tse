@@ -268,6 +268,8 @@ class Worm:
     ####################################################################
         
     def __pre_transaction_checks(self):
+        if not self.info:
+            raise WormException(WORM_ERROR_NO_WORM_CARD, 'No TSE available')
         self.info.update()
         if not self.info.hasPassedSelfTest:
             self.tse_runSelfTest()
