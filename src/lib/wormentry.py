@@ -20,11 +20,27 @@ class Worm_Entry:
 
     def __getattr__(self, key):
         if key in ['isValid',]:
-            return bool(self.__get_info_uint64(key))
-        elif key in ['id', 'logMessageLength', 'processDataLength', 'type']:
+            return bool(self.__get_info_uint(key))
+        elif key in ['id', ]:
+            return self.__get_info_uint32(key)
+        elif key in ['logMessageLength', 'processDataLength', 'type']:
             return self.__get_info_uint64(key)
         else:
             raise AttributeError('unimplemented: %s' % key)
+
+
+    def __get_info_uint(self, key):
+        getattr(self.wormlib, 'worm_entry_'+key).restype = c_uint
+        getattr(self.wormlib, 'worm_entry_'+key).argtypes = (WormEntry,)
+        ret = getattr(self.wormlib, 'worm_entry_'+key)(self.entry)
+        return ret
+
+
+    def __get_info_uint32(self, key):
+        getattr(self.wormlib, 'worm_entry_'+key).restype = c_uint32
+        getattr(self.wormlib, 'worm_entry_'+key).argtypes = (WormEntry,)
+        ret = getattr(self.wormlib, 'worm_entry_'+key)(self.entry)
+        return ret
 
 
     def __get_info_uint64(self, key):
@@ -33,7 +49,7 @@ class Worm_Entry:
         ret = getattr(self.wormlib, 'worm_entry_'+key)(self.entry)
         return ret
 
-   
+
     def iterate_first(self):
         ret = self.wormlib.worm_entry_iterate_first(self.entry)
         return ret
@@ -43,6 +59,7 @@ class Worm_Entry:
         return ret
     
     def iterate_id(self, id):
+        self.wormlib.worm_entry_iterate_id.argtypes(WormEntry, c_uint32)
         ret = self.wormlib.worm_entry_iterate_id(self.entry, id)
         return ret
     
@@ -54,8 +71,8 @@ class Worm_Entry:
         # FIXME So ist das nicht gedacht aber wir rechnen nicht mit sehr großen Datenmengen
         length = self.logMessageLength
         buffer = pointer((c_char * length)())
-        self.wormlib.worm_entry_readLogMessage.restype = c_uint64
-        self.wormlib.worm_entry_readLogMessage.argtypes = (WormEntry, POINTER(c_char*length), c_uint64)
+        self.wormlib.worm_entry_readLogMessage.restype = WormError
+        self.wormlib.worm_entry_readLogMessage.argtypes = (WormEntry, POINTER(c_char*length), worm_uint)
         ret = self.wormlib.worm_entry_readLogMessage(self.entry, buffer, length)
         s = cast(buffer, POINTER(c_char))
         return string_at(s, size=length)
@@ -64,8 +81,8 @@ class Worm_Entry:
         # FIXME So ist das nicht gedacht aber wir rechnen nicht mit sehr großen Datenmengen
         length = self.processDataLength - offset
         buffer = pointer((c_char * length)())
-        self.wormlib.worm_entry_readProcessData.restype = c_uint64
-        self.wormlib.worm_entry_readProcessData.argtypes = (WormEntry, c_uint64, POINTER(c_char*length), c_uint64)
+        self.wormlib.worm_entry_readProcessData.restype = WormError
+        self.wormlib.worm_entry_readProcessData.argtypes = (WormEntry, worm_uint, POINTER(c_char*length), worm_uint)
         ret = self.wormlib.worm_entry_readProcessData(self.entry, offset, buffer, length)
         s = cast(buffer, POINTER(c_char))
         return string_at(s, size=length)

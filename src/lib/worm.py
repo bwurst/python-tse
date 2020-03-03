@@ -188,7 +188,7 @@ class Worm:
     def tse_updateTime(self):
         if self.time_admin_pin:
             self.user_login(WORM_USER_TIME_ADMIN, self.time_admin_pin)
-        self.wormlib.worm_tse_updateTime.argtypes = (WormContext, c_uint64)
+        self.wormlib.worm_tse_updateTime.argtypes = (WormContext, worm_uint)
         self.wormlib.worm_tse_updateTime.restype = WormError
         ret = self.wormlib.worm_tse_updateTime(self.ctx, int(datetime.datetime.now().timestamp()))
         WormError_to_exception(ret)
@@ -288,7 +288,7 @@ class Worm:
         assert type(processdata) == bytes, 'processdata ist kein byte-string'
         assert type(processtype) == bytes, 'processtype ist kein byte-string'
         r = Worm_Transaction_Response(self)
-        self.wormlib.worm_transaction_start.argtypes = (WormContext, c_char_p, c_char_p, c_int, c_char_p, WormTransactionResponse)
+        self.wormlib.worm_transaction_start.argtypes = (WormContext, c_char_p, c_char_p, c_int64, c_char_p, WormTransactionResponse)
         self.wormlib.worm_transaction_start.restype = WormError
         ret = self.wormlib.worm_transaction_start(self.ctx, self.clientid.encode('latin1'), processdata, 
                                                   len(processdata), processtype, r.response)
@@ -305,7 +305,7 @@ class Worm:
         assert type(processdata) == bytes, 'processdata ist kein byte-string'
         assert type(processtype) == bytes, 'processtype ist kein byte-string'
         r = Worm_Transaction_Response(self)
-        self.wormlib.worm_transaction_update.argtypes = (WormContext, c_char_p, c_uint64, c_char_p, c_int, c_char_p, WormTransactionResponse)
+        self.wormlib.worm_transaction_update.argtypes = (WormContext, c_char_p, worm_uint, c_char_p, worm_uint, c_char_p, WormTransactionResponse)
         self.wormlib.worm_transaction_update.restype = WormError
         ret = self.wormlib.worm_transaction_update(self.ctx, self.clientid.encode('latin1'), transactionnumber, processdata, 
                                                   len(processdata), processtype, r.response)
@@ -321,7 +321,7 @@ class Worm:
         assert type(processdata) == bytes, 'processdata ist kein byte-string'
         assert type(processtype) == bytes, 'processtype ist kein byte-string'
         r = Worm_Transaction_Response(self)
-        self.wormlib.worm_transaction_finish.argtypes = (WormContext, c_char_p, c_uint64, c_char_p, c_int, c_char_p, WormTransactionResponse)
+        self.wormlib.worm_transaction_finish.argtypes = (WormContext, c_char_p, worm_uint, c_char_p, worm_uint, c_char_p, WormTransactionResponse)
         self.wormlib.worm_transaction_finish.restype = WormError
         ret = self.wormlib.worm_transaction_finish(self.ctx, self.clientid.encode('latin1'), transactionnumber, processdata, 
                                                   len(processdata), processtype, r.response)
@@ -331,9 +331,9 @@ class Worm:
         
     def transaction_listStartedTransactions(self, skip=0):
         self.__pre_transaction_checks()
-        numbers_buffer = (c_uint64 * 62)()
+        numbers_buffer = (worm_uint * 62)()
         count = c_int()
-        self.wormlib.worm_transaction_listStartedTransactions.argtypes = (WormContext, c_char_p, c_uint64, c_uint64 * 62, c_int, POINTER(c_int))
+        self.wormlib.worm_transaction_listStartedTransactions.argtypes = (WormContext, c_char_p, c_uint, worm_uint * 62, c_int, POINTER(c_int))
         self.wormlib.worm_transaction_listStartedTransactions.restype = WormError
         ret = self.wormlib.worm_transaction_listStartedTransactions(self.ctx, self.clientid.encode('latin1'), skip, numbers_buffer, 62, byref(count))
         WormError_to_exception(ret)
@@ -347,8 +347,8 @@ class Worm:
     def getLogMessageCertificate(self):
         s = c_char_p()
         buffer = pointer((c_char * 1024*1024)())
-        sLength = c_uint64(1024*1024) # 1 MB
-        self.wormlib.worm_getLogMessageCertificate.argtypes = (WormContext, POINTER(c_char * 1024*1024), POINTER(c_uint64))
+        sLength = c_uint32(1024*1024) # 1 MB
+        self.wormlib.worm_getLogMessageCertificate.argtypes = (WormContext, POINTER(c_char * 1024*1024), POINTER(c_uint32))
         res = self.wormlib.worm_getLogMessageCertificate(self.ctx, buffer, byref(sLength))
         WormError_to_exception(res)
         s = cast(buffer, POINTER(c_char))
@@ -356,7 +356,7 @@ class Worm:
         return ret
 
     def export_tar(self, filename, clientid=None, time_start=None, time_end=None, trxid_start=None, trxid_end=None):
-        CALLBACK = CFUNCTYPE(c_int, POINTER(c_char), c_uint64, c_void_p)
+        CALLBACK = CFUNCTYPE(c_int, POINTER(c_char), c_uint, c_void_p)
         callback = CALLBACK(self.export_tar_callback)
         with open(filename, 'wb') as self.tarfile:
             if time_start:
@@ -365,12 +365,12 @@ class Worm:
                     time_end = int(time_start.timestamp())
                 assert type(time_start) == int
                 assert type(time_end) == int
-                ret = self.wormlib.worm_export_tar_filtered_time(self.ctx, c_uint64(time_start), c_uint64(time_end), c_char_p(clientid), callback, None)
+                ret = self.wormlib.worm_export_tar_filtered_time(self.ctx, worm_uint(time_start), worm_uint(time_end), c_char_p(clientid), callback, None)
                 WormError_to_exception(ret)
             elif trxid_start:
                 assert type(trxid_start) == int
                 assert type(trxid_end) == int
-                ret = self.wormlib.worm_export_tar_filtered_transaction(self.ctx, c_uint64(trxid_start), c_uint64(trxid_end), c_char_p(clientid), callback, None)
+                ret = self.wormlib.worm_export_tar_filtered_transaction(self.ctx, worm_uint(trxid_start), worm_uint(trxid_end), c_char_p(clientid), callback, None)
                 WormError_to_exception(ret)
             else:
                 ret = self.wormlib.worm_export_tar(self.ctx, callback, None)
@@ -381,8 +381,8 @@ class Worm:
         '''inkrementeller export
         returns (firstSignatureCounter, lastSignatureCounter, newState)
         newState muss beim nächsten inkrementellen export als lastState übergeben werden.'''
-        CALLBACK = CFUNCTYPE(c_int, POINTER(c_char), c_uint64, c_void_p)
-        callback = CALLBACK(self.export_tar_callback)
+        CALLBACK = CFUNCTYPE(c_int, POINTER(c_char), c_uint, c_uint32, c_uint32, c_void_p)
+        callback = CALLBACK(self.export_tar_incremental_callback)
         with open(filename, 'wb') as self.tarfile:
             firstSignatureCounter = c_uint64()
             lastSignatureCounter = c_uint64()
@@ -405,6 +405,15 @@ class Worm:
             # Sollte schon vorhanden sein, sonst Fehler
             return 1
         self.tarfile.write(string_at(chunk, chunklen))
+        return 0
+
+    def export_tar_incremental_callback(self, chunk, chunklen, processedBlocks, totalBlocks, data):
+        chunk = cast(chunk, POINTER(c_char))
+        if not self.tarfile:
+            # Sollte schon vorhanden sein, sonst Fehler
+            return 1
+        self.tarfile.write(string_at(chunk, chunklen))
+        log.info('exported %i / %i blocks' % (processedBlocks, totalBlocks))
         return 0
 
 

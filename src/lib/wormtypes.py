@@ -6,6 +6,7 @@ WormEntry = c_void_p
 WormTransactionResponse = c_void_p
 
 WormError = c_int
+worm_uint = c_uint64
 
 class WormRegisteredClients(Structure):
     _fields_ = [

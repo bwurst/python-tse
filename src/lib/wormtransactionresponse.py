@@ -37,8 +37,8 @@ class Worm_Transaction_Response:
         
     def __get_string(self, key):
         s = c_char_p()
-        sLength = c_uint64()
-        getattr(self.wormlib, 'worm_transaction_response_'+key).argtypes = (WormTransactionResponse, POINTER(c_char_p), POINTER(c_uint64))
+        sLength = worm_uint()
+        getattr(self.wormlib, 'worm_transaction_response_'+key).argtypes = (WormTransactionResponse, POINTER(c_char_p), POINTER(worm_uint))
         getattr(self.wormlib, 'worm_transaction_response_'+key)(self.response, byref(s), byref(sLength))
         s = cast(s, POINTER(c_char))
         ret = string_at(s, size=sLength.value)
@@ -46,7 +46,7 @@ class Worm_Transaction_Response:
         
 
     def __get_date(self, key):
-        getattr(self.wormlib, 'worm_transaction_response_'+key).restype = c_uint64
+        getattr(self.wormlib, 'worm_transaction_response_'+key).restype = worm_uint
         getattr(self.wormlib, 'worm_transaction_response_'+key).argtypes = (WormTransactionResponse,)
         ret = getattr(self.wormlib, 'worm_transaction_response_'+key)(self.response)
         return datetime.datetime.fromtimestamp(ret)

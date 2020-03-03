@@ -31,14 +31,17 @@ class Worm_Info:
                    'isCtssInterfaceActive', 'isErsInterfaceActive', 'isExportEnabledIfCspTestFails',
                    'isDataImportInProgress', 'isTransactionInProgress', 'hasChangedPuk', 'hasChangedAdminPin',
                    'hasChangedTimeAdminPin']:
-            return bool(self.__get_info_uint64(key))
+            return bool(self.__get_info_uint32(key))
+        elif key in ['tarExportSizeInSectors', 'tarExportSize']:
+            return self.__get_info_uint64(key)
         elif key in ['size', 'capacity', 'timeUntilNextSelfTest', 'startedTransactions', 'maxStartedTransactions',
                      'createdSignatures', 'maxSignatures', 'remainingSignatures', 'maxTimeSynchronizationDelay',
-                     'maxUpdateDelay', 'registeredClients', 'maxRegisteredClients', 'tarExportSizeInSectors',
-                     'tarExportSize', 'initializationState']:
-            return self.__get_info_uint64(key)
-        elif key in ['customizationIdentifier', 'uniqueId', 'tsePublicKey', 'tseSerialNumber']:
+                     'maxUpdateDelay', 'registeredClients', 'maxRegisteredClients', 'initializationState']:
+            return self.__get_info_uint32(key)
+        elif key in ['customizationIdentifier', 'uniqueId']:
             return self.__get_string(key)
+        elif key in ['tsePublicKey', 'tseSerialNumber']:
+            return self.__get_string64(key)
         elif key in ['tseDescription', 'formFactor',]:
             return self.__get_chars(key)
         elif key in ['softwareVersion', 'hardwareVersion']:
@@ -56,14 +59,31 @@ class Worm_Info:
         return ret
 
         
+    def __get_info_uint32(self, key):
+        getattr(self.wormlib, 'worm_info_'+key).restype = c_uint32
+        getattr(self.wormlib, 'worm_info_'+key).argtypes = (WormInfo,)
+        ret = getattr(self.wormlib, 'worm_info_'+key)(self.info)
+        return ret
+
+
     def __get_chars(self, key):
         getattr(self.wormlib, 'worm_info_'+key).restype = c_char_p
         getattr(self.wormlib, 'worm_info_'+key).argtypes = (WormInfo,)
         ret = getattr(self.wormlib, 'worm_info_'+key)(self.info)
         return ret.decode('latin1')
 
-    
+
     def __get_string(self, key):
+        s = c_char_p()
+        sLength = c_uint()
+        getattr(self.wormlib, 'worm_info_'+key).argtypes = (WormInfo, POINTER(c_char_p), POINTER(c_uint))
+        getattr(self.wormlib, 'worm_info_'+key)(self.info, byref(s), byref(sLength))
+        s = cast(s, POINTER(c_char))
+        ret = string_at(s, size=sLength.value)
+        return ret
+
+
+    def __get_string64(self, key):
         s = c_char_p()
         sLength = c_uint64()
         getattr(self.wormlib, 'worm_info_'+key).argtypes = (WormInfo, POINTER(c_char_p), POINTER(c_uint64))
@@ -73,7 +93,7 @@ class Worm_Info:
         return ret
         
     def __get_version(self, key):
-        getattr(self.wormlib, 'worm_info_'+key).restype = c_uint64
+        getattr(self.wormlib, 'worm_info_'+key).restype = c_uint32
         getattr(self.wormlib, 'worm_info_'+key).argtypes = (WormInfo,)
         ret = getattr(self.wormlib, 'worm_info_'+key)(self.info)
         major = (ret & 0xffff0000) >> 16 
