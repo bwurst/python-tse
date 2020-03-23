@@ -66,7 +66,7 @@ Um Kassen-Transaktionen abzusichern muss eine Transaktion gestartet, beliebig of
 Bei diesen Operationen wird ein "response"-Objekt zurückgegeben, aus dem Status-Informationen ausgelesen werden können. Die Transaktionsnummer ist dabei besonders wichtig für die nachfolgenden Operationen.
 
 ```python
-response = myworm.transaction_start(processdata=b'...', processtype='Bestellung-V1')
+response = myworm.transaction_start(processdata=b'', processtype='')
 num = response.transactionNumber
 response = myworm.transaction_update(num, processdata=b'...', processtype='Bestellung-V1')
 response = myworm.transaction_finish(num, processdata=b'...', processtype='Bestellung-V1')
@@ -79,6 +79,9 @@ print(base64_encode(response.signature))
 Hier wird eine Transaktion gestartet, einmal aktualisiert und danach abgeschlossen. Am Ende werden der Signatur-Zähler, die Signatur-Zeit und die Signatur ausgegeben.
 
 Die Parameter **processtype** und **processdata** sollten als Bytes-Objekte übergeben werden um Verfälschungen auszuschließen. Hilfsweise werden Strings via "latin1"-Codec codiert.
+
+**Hinweis zu den Inhalten**: Gemäß aktueller Richtlinien sollen processtype und processdata beim Start der Transaktion zunächst leer bleiben (Nur Absicherung des Zeitpunkts der ersten Aktion) und später mit Inhalten gefüllt werden. Die Bibliothek oder die TSE prüfen keinerlei Plausibilität der übergebenen Daten.
+
 
 ## Exceptions
 
