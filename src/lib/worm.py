@@ -363,9 +363,15 @@ class Worm:
     
     def getLogMessageCertificate(self):
         s = c_char_p()
-        buffer = pointer((c_char * 1024*1024)())
-        sLength = c_uint32(1024*1024) # 1 MB
-        self.wormlib.worm_getLogMessageCertificate.argtypes = (WormContext, POINTER(c_char * 1024*1024), POINTER(c_uint32))
+        sLength = c_uint32()
+        # First call with NULL buffer to get the needed size
+        self.wormlib.worm_getLogMessageCertificate.argtypes = (WormContext, POINTER(c_char_p), POINTER(c_uint32))
+        res = self.wormlib.worm_getLogMessageCertificate(self.ctx, None, byref(sLength))
+        WormError_to_exception(res)
+
+        # initialize buffer to the correct length
+        buffer = pointer((c_char * sLength.value)())
+        self.wormlib.worm_getLogMessageCertificate.argtypes = (WormContext, POINTER(c_char * sLength.value), POINTER(c_uint32))
         res = self.wormlib.worm_getLogMessageCertificate(self.ctx, buffer, byref(sLength))
         WormError_to_exception(res)
         s = cast(buffer, POINTER(c_char))
