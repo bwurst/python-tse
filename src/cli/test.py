@@ -2,6 +2,9 @@ import config
 import sys
 import os.path
 from encodings.base64_codec import base64_encode
+import logging
+logging.getLogger('TSE-test')
+logging.basicConfig()
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib'))
 
@@ -37,7 +40,7 @@ if len(sys.argv) > 1 and sys.argv[1] == '--info':
     print('Signatur-Algorithmus:', TSE.signatureAlgorithm())
     print('Pubkey:', base64_encode(TSE.info.tsePublicKey))
     print('Serial:', bytes(TSE.info.tseSerialNumber).hex())
-    
+
     print('Zahl der aktiven Clients: %i / %i' % (TSE.info.registeredClients, TSE.info.maxRegisteredClients))
     print('Zertifikat-Ablaufdatum:', TSE.info.certificateExpirationDate)
     
