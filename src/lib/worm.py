@@ -310,6 +310,7 @@ class Worm:
         ret = self.wormlib.worm_transaction_start(self.ctx, self.clientid.encode('latin1'), processdata, 
                                                   len(processdata), processtype, r.response)
         WormError_to_exception(ret)
+        self.transaction_start_time = r.logTime
         return r
 
         
@@ -344,6 +345,22 @@ class Worm:
                                                   len(processdata), processtype, r.response)
         WormError_to_exception(ret)
         self.info.update()
+        
+        # get qr code information
+        qrcode = ['V0',]
+        qrcode.append(self.clientid)
+        qrcode.append(processtype)
+        qrcode.append(processdata)
+        qrcode.append(r.transactionNumber)
+        qrcode.append(r.signatureCounter)
+        qrcode.append(self.transaction_start_time.strftime('%Y-%m-%dT%H:%M:%S.000Z'))
+        qrcode.append(r.logTime.strftime('%Y-%m-%dT%H:%M:%S.000Z'))
+        qrcode.append(self.signatureAlgorithm())
+        qrcode.append('unixTime')
+        qrcode.append(r.signature)
+        qrcode.append(self.info.tsePublicKey)
+        self.qrcode_data = ';'.join(qrcode)     
+        
         return r
         
     def transaction_listStartedTransactions(self, skip=0):
