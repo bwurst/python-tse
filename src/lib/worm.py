@@ -18,6 +18,7 @@
 import os.path
 import datetime
 import logging
+import codecs
 from ctypes import *
 from wormtypes import *
 from worminfo import Worm_Info
@@ -357,9 +358,9 @@ class Worm:
         qrcode.append(r.logTime.strftime('%Y-%m-%dT%H:%M:%S.000Z'))
         qrcode.append(self.signatureAlgorithm())
         qrcode.append('unixTime')
-        qrcode.append(r.signature)
-        qrcode.append(self.info.tsePublicKey)
-        self.qrcode_data = ';'.join(qrcode)     
+        qrcode.append(codecs.encode(r.signature, 'base64').decode())
+        qrcode.append(codecs.encode(self.info.tsePublicKey, 'base64').decode())
+        self.qrcode_data = ';'.join([str(x) for x in qrcode])     
         
         return r
         
