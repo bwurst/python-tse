@@ -1,4 +1,8 @@
 # python-tse
+
+| :warning: **Dieser Code wird vom Autor nicht mehr aktiv weiterentwickelt.** Mit der Verfügbarkeit einer zertifizierten Cloud-TSE ist mein eigenes Setup einfacher und besser abzubilden. Daher wird dieser Code nicht mehr weiter entwickelt. Pull-Requests können ggf. noch bearbeitet werden. |
+| --- |
+
 Gemäß KassenSicherungsVerordnung muss jede in Deutschland betriebene Bargeld-Registrierkasse ab 2020 mit einem Sicherheitsmodul "TSE" / "Technische Sicherheits-Einrichtung" ausgerüstet werden. Ein Hersteller dieser Geräte ist die schweizerische Firma Swissbit.
 
 Voraussetzung für die Nutzung dieses Moduls ist eine binäre Bibliothek, die mit der TSE kommuniziert. Die Weitergabe-Auflagen dieser Bibliothek sind restriktiv, daher ist diese Bibliothek nicht hier im Repository enthalten. Käufer der Entwickler-Version erhalten diese Daten vom Händler.
