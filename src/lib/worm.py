@@ -45,6 +45,7 @@ class Worm:
     wormlib = None
 
     def __init__(self, clientid, mountpoint = None, time_admin_pin = None, library = None):
+        self.qrcode_data = None
         log.setLevel(logging.DEBUG)
         self.time_admin_pin = time_admin_pin
         self.clientid = clientid
