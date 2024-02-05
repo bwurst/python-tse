@@ -351,16 +351,16 @@ class Worm:
         # get qr code information
         qrcode = ['V0',]
         qrcode.append(self.clientid)
-        qrcode.append(processtype)
-        qrcode.append(processdata)
+        qrcode.append(processtype.decode('utf-8'))
+        qrcode.append(processdata.decode('utf-8'))
         qrcode.append(r.transactionNumber)
         qrcode.append(r.signatureCounter)
         qrcode.append(self.transaction_start_time.strftime('%Y-%m-%dT%H:%M:%S.000Z'))
         qrcode.append(r.logTime.strftime('%Y-%m-%dT%H:%M:%S.000Z'))
         qrcode.append(self.signatureAlgorithm())
         qrcode.append('unixTime')
-        qrcode.append(codecs.encode(r.signature, 'base64').decode())
-        qrcode.append(codecs.encode(self.info.tsePublicKey, 'base64').decode())
+        qrcode.append(codecs.encode(r.signature, 'base64').decode().strip())
+        qrcode.append(codecs.encode(self.info.tsePublicKey, 'base64').decode().strip())
         self.qrcode_data = ';'.join([str(x) for x in qrcode])     
         
         return r
