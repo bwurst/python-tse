@@ -19,6 +19,7 @@ import os.path
 import datetime
 import logging
 import codecs
+from base64 import b64encode
 from ctypes import *
 from wormtypes import *
 from worminfo import Worm_Info
@@ -355,12 +356,12 @@ class Worm:
         qrcode.append(processdata.decode('utf-8'))
         qrcode.append(r.transactionNumber)
         qrcode.append(r.signatureCounter)
-        qrcode.append(self.transaction_start_time.strftime('%Y-%m-%dT%H:%M:%S.000Z'))
-        qrcode.append(r.logTime.strftime('%Y-%m-%dT%H:%M:%S.000Z'))
+        qrcode.append(self.transaction_start_time.astimezone(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.000Z'))
+        qrcode.append(r.logTime.astimezone(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.000Z'))
         qrcode.append(self.signatureAlgorithm())
         qrcode.append('unixTime')
-        qrcode.append(codecs.encode(r.signature, 'base64').decode().strip())
-        qrcode.append(codecs.encode(self.info.tsePublicKey, 'base64').decode().strip())
+        qrcode.append(b64encode(r.signature).decode('ascii').strip())
+        qrcode.append(b64encode(self.info.tsePublicKey).decode('ascii').strip())
         self.qrcode_data = ';'.join([str(x) for x in qrcode])     
         
         return r
