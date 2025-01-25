@@ -496,9 +496,10 @@ class Worm:
         ret = self.wormlib.worm_flash_health_summary(self.ctx, byref(uncorrectableEccErrors), byref(percentageRemainingSpareBlocks),
                                                       byref(percentageRemainingEraseCounts), byref(percentageRemainingTenYearsDataRetention))
 
-        print(ret)
-        print(uncorrectableEccErrors.value)
-        print(percentageRemainingSpareBlocks.value)
-        print(percentageRemainingEraseCounts.value)
-        print(percentageRemainingTenYearsDataRetention.value)
-
+        return {
+            "status": ret,
+            "uncorrectableEccErrors": uncorrectableEccErrors.value,
+            "percentageRemainingSpareBlocks": percentageRemainingSpareBlocks.value,
+            "percentageRemainingEraseCounts": percentageRemainingEraseCounts.value,
+            "percentageRemainingTenYearsDataRetention": percentageRemainingTenYearsDataRetention.value,
+        }

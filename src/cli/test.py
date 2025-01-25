@@ -49,8 +49,11 @@ if len(sys.argv) > 1 and sys.argv[1] == '--info':
     print('Software-Version: %i.%i.%i' % TSE.info.softwareVersion)
     print('Library-Version:', TSE.getVersion())
     print('TSE Form-Factor:', TSE.info.formFactor)
-    
-    TSE.flash_health_summary()
+
+    print('Health check:')
+    status = TSE.flash_health_summary()
+    for key, val in status.items():
+        print(f'{key}: {val}')
 
 if len(sys.argv) > 1 and sys.argv[1] == '--reset':
     TSE.tse_factoryReset()
