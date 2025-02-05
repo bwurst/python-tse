@@ -45,13 +45,14 @@ def find_mountpoint():
 class Worm:
     wormlib = None
 
-    def __init__(self, clientid, mountpoint = None, time_admin_pin = None, library = None):
+    def __init__(self, clientid, mountpoint = None, time_admin_pin = None, library = None, keepalive = None):
         self.qrcode_data = None
         log.setLevel(logging.DEBUG)
         self.time_admin_pin = time_admin_pin
         self.clientid = clientid
         self.entry = None
         self.mountpoint = mountpoint
+        self.keepalive = keepalive
         if not library:
             library = os.path.abspath(os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../so/libWormAPI.so'))
         if not os.path.exists(library):
@@ -68,7 +69,7 @@ class Worm:
             log.error('TSE: Exception occured whilst initializing TSE. Possibly no module present?!')
             pass
 
-    def setup(self, mountpoint = None):
+    def setup(self, mountpoint = None, keepalive=None):
         # Hier können Laufzeitfehler auftreten, wenn die TSE nicht vorhanden ist!
         if not mountpoint:
             mountpoint = self.mountpoint
@@ -83,6 +84,21 @@ class Worm:
         log.debug('call worm_init()')
         ret = self.wormlib.worm_init(byref(self.ctx), mountpoint.encode('utf-8'))
         WormError_to_exception(ret)
+
+        # Configure keepalive. Default of SDK is keepalive interval of 1 Second, likely unnecessary on linux.
+        # So we default to no have any keepalive as it was before
+        try:
+            if keepalive and int(keepalive) > 0:
+                self.keepalive_configure(keepalive)
+            elif keepalive is False or keepalive == 0:
+                self.keepalive_disable()
+            elif self.keepalive and int(self.keepalive) > 0:
+                self.keepalive_configure(self.keepalive)
+            else:
+                self.keepalive_disable()
+        except ValueError:
+            log.critical(f'could not understand keepalive argument {str(self.keepalive)}, disabling keepalive')
+            self.keepalive_disable()
 
         self.info = Worm_Info(self)
         
@@ -103,6 +119,22 @@ class Worm:
             self.wormlib.worm_cleanup.restype = WormError
             ret = self.wormlib.worm_cleanup(self.ctx)
             WormError_to_exception(ret)
+
+    def keepalive_configure(self, intervalInSeconds : int):
+        # Intervall muss zwischen 1 und 3600 sein.
+        assert 1 <= intervalInSeconds <= 3600, 'keepalive interval must be in range from 1 to 3600'
+        self.wormlib.worm_keepalive_configure.argtypes = (WormContext, c_int)
+        self.wormlib.worm_keepalive_configure.restype = WormError
+        ret = self.wormlib.worm_keepalive_configure(self.ctx, intervalInSeconds)
+        WormError_to_exception(ret)
+        return ret
+
+    def keepalive_disable(self):
+        self.wormlib.worm_keepalive_disable.argtypes = (WormContext,)
+        self.wormlib.worm_keepalive_disable.restype = WormError
+        ret = self.wormlib.worm_keepalive_disable(self.ctx)
+        WormError_to_exception(ret)
+        return ret
 
     ####################################################################
     # Library Information
@@ -128,7 +160,7 @@ class Worm:
     ####################################################################
     # TSE-Configuration
     ####################################################################
-    
+
     def tse_factoryReset(self):
         self.wormlib.worm_tse_factoryReset.restype = WormError
         self.wormlib.worm_tse_factoryReset.argtypes = (WormContext, )

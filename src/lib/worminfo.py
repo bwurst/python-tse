@@ -51,7 +51,8 @@ class Worm_Info:
             return bool(self.__get_info_uint32(key))
         elif key in ['tarExportSizeInSectors', 'tarExportSize']:
             return self.__get_info_uint64(key)
-        elif key in ['size', 'capacity', 'timeUntilNextSelfTest', 'startedTransactions', 'maxStartedTransactions',
+        elif key in ['size', 'capacity', 'timeUntilNextSelfTest', 'timeUntilNextTimeSynchronization',
+                     'startedTransactions', 'maxStartedTransactions',
                      'createdSignatures', 'maxSignatures', 'remainingSignatures', 'maxTimeSynchronizationDelay',
                      'maxUpdateDelay', 'registeredClients', 'maxRegisteredClients', 'initializationState']:
             return self.__get_info_uint32(key)

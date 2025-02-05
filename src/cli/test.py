@@ -30,6 +30,7 @@ if len(sys.argv) > 1 and sys.argv[1] == '--info':
     print('Time-Admin-PIN schon gesetzt? =>', TSE.info.hasChangedTimeAdminPin)
     
     print('Zeit bis zum nächsten Selbsttest:', TSE.info.timeUntilNextSelfTest)
+    print('Zeit bis zum nächsten Time-Sync:', TSE.info.timeUntilNextTimeSynchronization)
     print('Zeit zwischen zwei Time-Syncs:', TSE.info.maxTimeSynchronizationDelay)
     print('Maximale Dauer einer offenen Transaktion:', TSE.info.maxUpdateDelay)
     
