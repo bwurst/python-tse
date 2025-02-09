@@ -53,6 +53,7 @@ class Worm:
         self.entry = None
         self.mountpoint = mountpoint
         self.keepalive = keepalive
+        self.export_callback = None
         if not library:
             library = os.path.abspath(os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../so/libWormAPI.so'))
         if not os.path.exists(library):
@@ -451,11 +452,18 @@ class Worm:
                 ret = self.wormlib.worm_export_tar(self.ctx, callback, None)
                 WormError_to_exception(ret)
     
-    
-    def export_tar_incremental(self, filename, lastState=None):
+
+    def export_tar_incremental(self, filename, lastState=None, callback=None):
+        (firstSignatureCounter, lastSignatureCounter, return_state, allDataExported) = self.export_tar_incremental_ex(filename, lastState=lastState, maxExportSize=0, callback=callback)
+        return (firstSignatureCounter, lastSignatureCounter, return_state)
+
+    def export_tar_incremental_ex(self, filename, lastState=None, maxExportSize=0, callback=None):
         '''inkrementeller export
-        returns (firstSignatureCounter, lastSignatureCounter, newState)
-        newState muss beim nächsten inkrementellen export als lastState übergeben werden.'''
+        returns (firstSignatureCounter, lastSignatureCounter, newState, allDataExported)
+        newState muss beim nächsten inkrementellen export als lastState übergeben werden.
+        callback kann eine callback-Funktion sein, die als argumente processedBlocks und totalBlocks erhält.
+        Gibt die Callback-Funktion False zurück, wird abgebrochen.'''
+        self.export_callback = callback
         CALLBACK = CFUNCTYPE(c_int, POINTER(c_char), c_uint, c_uint32, c_uint32, c_void_p)
         callback = CALLBACK(self.export_tar_incremental_callback)
         with open(filename, 'wb') as self.tarfile:
@@ -468,11 +476,13 @@ class Worm:
                 last_state_len = c_int(len(lastState))
             new_state = cast(create_string_buffer(WORM_EXPORT_TAR_INCREMENTAL_STATE_SIZE), c_char_p)
             new_state_len = c_int(WORM_EXPORT_TAR_INCREMENTAL_STATE_SIZE)
-            ret = self.wormlib.worm_export_tar_incremental(self.ctx, last_state, last_state_len, new_state, new_state_len, byref(firstSignatureCounter), byref(lastSignatureCounter), callback, None)
+            allDataExported = c_int64()
+            ret = self.wormlib.worm_export_tar_incremental(self.ctx, last_state, last_state_len, new_state, new_state_len, maxExportSize, byref(allDataExported), byref(firstSignatureCounter), byref(lastSignatureCounter), callback, None)
             WormError_to_exception(ret)
             new_state = cast(new_state, POINTER(c_char))
             return_state = string_at(new_state, new_state_len)
-            return (firstSignatureCounter.value, lastSignatureCounter.value, return_state)
+            self.export_callback = None
+            return (firstSignatureCounter.value, lastSignatureCounter.value, return_state, bool(allDataExported))
     
     def export_tar_callback(self, chunk, chunklen, data):
         chunk = cast(chunk, POINTER(c_char))
@@ -489,11 +499,36 @@ class Worm:
             return 1
         self.tarfile.write(string_at(chunk, chunklen))
         log.info('exported %i / %i blocks' % (processedBlocks, totalBlocks))
+        if self.export_callback:
+            if not self.export_callback(processedBlocks, totalBlocks):
+                return 1
         return 0
 
+    def export_tar_incremental_sizeInSectors(self, lastState=None):
+        '''calculates size of an incremental export in sectors'''
+        last_state = None
+        last_state_len = 0
+        if lastState:
+            last_state = c_char_p(lastState)
+            last_state_len = c_int(len(lastState))
+        size = c_uint64()
+        ret = self.wormlib.worm_export_tar_incremental_sizeInSectors(self.ctx, last_state, last_state_len, byref(size))
+        WormError_to_exception(ret)
+        return size.value
+
+    def export_tar_incremental_size(self, lastState=None):
+        '''calculates size of an incremental export in bytes'''
+        last_state = None
+        last_state_len = 0
+        if lastState:
+            last_state = c_char_p(lastState)
+            last_state_len = c_int(len(lastState))
+        size = c_uint64()
+        ret = self.wormlib.worm_export_tar_incremental_size(self.ctx, last_state, last_state_len, byref(size))
+        WormError_to_exception(ret)
+        return size.value
 
 
-        
     ####################################################################
     # disfunctional
     ####################################################################
