@@ -1,8 +1,5 @@
 # python-tse
 
-| :warning: **Dieser Code wird vom Autor nicht mehr aktiv weiterentwickelt.** Mit der Verfügbarkeit einer zertifizierten Cloud-TSE ist mein eigenes Setup einfacher und besser abzubilden. Daher wird dieser Code nicht mehr weiter entwickelt. Pull-Requests können ggf. noch bearbeitet werden. |
-| --- |
-
 Gemäß KassenSicherungsVerordnung muss jede in Deutschland betriebene Bargeld-Registrierkasse ab 2020 mit einem Sicherheitsmodul "TSE" / "Technische Sicherheits-Einrichtung" ausgerüstet werden. Ein Hersteller dieser Geräte ist die schweizerische Firma Swissbit.
 
 Voraussetzung für die Nutzung dieses Moduls ist eine binäre Bibliothek, die mit der TSE kommuniziert. Die Weitergabe-Auflagen dieser Bibliothek sind restriktiv, daher ist diese Bibliothek nicht hier im Repository enthalten. Käufer der Entwickler-Version erhalten diese Daten vom Händler.
@@ -111,9 +108,11 @@ tse.export_tar(filename='...')
 Hier wird der gesamte Bestand als ein TAR-File exportiert. Es können Einschränkungen nach Datum oder Transaktionenummern festgelegt werden, Details sind im Code nachzuschauen.
 
 ```python
-(firstSignatureCounter, lastSignatureCounter, newState) = tse.export_tar_incremental(filename='...', lastState=None)
+(firstSignatureCounter, lastSignatureCounter, newState) = tse.export_tar_incremental(filename='...', lastState=None, callback=None)
 ```
-Hier wird Status als "newState" ausgegeben, dieser kann beim nächsten Aufruf als "lastState" wieder übergeben werden um den Export ab der letzten Steller weiter zu führen. Der Status muss dabei vom Kassensystem zwischengespeichert werden um z.B. einen täglichen oder wöchentlichen inkrementellen Export zu machen. 
+Hier wird Status als "newState" ausgegeben, dieser kann beim nächsten Aufruf als "lastState" wieder übergeben werden um den Export ab der letzten Steller weiter zu führen. Der Status muss dabei vom Kassensystem zwischengespeichert werden um z.B. einen täglichen oder wöchentlichen inkrementellen Export zu machen.
+
+Der Parameter _callback_ kann eine Callback-Funktion sein, die ggf. einen Progress-Dialog oder ähnliches bedient. Die Funktion kann **False** zurück liefern, um den Export abzubrechen.
 
 
 ## Abrufen der Transaktionen
