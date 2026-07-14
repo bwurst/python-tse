@@ -55,7 +55,7 @@ class TSE():
         self.master = False
         if not self.__class__._tse:
             log.info('start new TSE controller thread!')
-            self.__class__._tse = worm.Worm(clientid=conf['clientid'], time_admin_pin=conf['timeadminpin'])
+            self.__class__._tse = worm.Worm(clientid=conf['clientid'], admin_pin=conf['adminpin'], admin_puk=conf['adminpuk'], time_admin_pin=conf['timeadminpin'])
             self.__class__._lock = Lock()
             self.__class__._stop = Event()
             self.__class__._thread = Thread(target=self.worker)

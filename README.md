@@ -4,6 +4,8 @@ Gemäß KassenSicherungsVerordnung muss jede in Deutschland betriebene Bargeld-R
 
 Voraussetzung für die Nutzung dieses Moduls ist eine binäre Bibliothek, die mit der TSE kommuniziert. Die Weitergabe-Auflagen dieser Bibliothek sind restriktiv, daher ist diese Bibliothek nicht hier im Repository enthalten. Käufer der Entwickler-Version erhalten diese Daten vom Händler.
 
+**Wichtig:** Diese Version der Python-Bibliothek setzt Version 6.0.0 der WORM-Library voraus. Es sollte weiterhin mit Hardware 1.x kompatibel sein aber auch Hardware 2.0 regulär unterstützen.  
+
 Der Interne Name der TSE-Bibliothek ist **worm** ("write once, read many"), der aus Gründen der Kompatibilität beibehalten wird. 
 
 Diese Python-Bibliothek kümmert sich um den Datenaustausch mit dem Modul.
@@ -22,18 +24,18 @@ Ein Ablauf könnte so aussehen:
 ```python
 import worm
 
-tse = worm.Worm(clientid="...", time_admin_pin="...")
+tse = worm.Worm(clientid="...", time_admin_pin="..."[, admin_puk="...", admin_pin="..."])
 ```
 
-Bei einem fabrikneuen Modul wird dann eine Warnung ausgegeben, dass das Modul noch nicht initialisiert ist.
+Bei einem fabrikneuen Modul wird ganz automatisch die Initialisierung vorgenommen, sofern admin_pin und admin_puk übergeben wurden. Das passiert in der WORM-Library über worm_tse_setup_ext().
 
+Werden admin_pin und admin_puk nicht übergeben und das Modul ist nicht initialisiert, dann kommt diese Exception: 
 ```
 ./src/lib/worm.py:54: Warning: TSE ist noch nicht initialisiert. Bitte zuerst initialisieren!
   warnings.warn(Warning('TSE ist noch nicht initialisiert. Bitte zuerst initialisieren!'))
 ```
 
-
-## Einmaliges Initialisieren der TSE
+## Einmaliges Initialisieren der TSE (obsolet, wird über den Konstruktor gemacht)
 
 Vor der allerersten Nutzung muss die TSE initialisiert werden. Ob dies nötig ist, zeigt die Status-Variable **initializationState**.
 
@@ -49,9 +51,11 @@ Die Client-ID sollte bereits im Konstruktor übergeben worden sein und wird aus 
 Die Swissbit-Bibliothek unterstützt einige Kommandos um die Initialisierung einzeln vorzunehmen. Diese sind hier nicht implementiert, da alles mit einem einzigen Aufruf von tse_setup() erledigt wird. 
 
 
-## Selbsttest und Zeit
+## Selbsttest und Zeit (ist in der aktuellen Library automatisch ausgeführt)
 
-Nach einem Neustart und nach mehr als 24 Stunden Betrieb muss das TSE-Modul einen Selbsttest machen, zudm muss regelmäßig ca. alle halbe Stunde die Zeit gesetzt werden. Beides macht die Python-Bibliothek transparent bei Bedarf um Transaktionen zu ermöglichen. **HINWEIS:** Da der Selbsttest bis zu einer Minute dauern kann, ist es sinnvoll, den Selbsttest beim Start und danach täglich zu machen bevor eine Kunden-Transaktion eröffnet wird. Das Setzen der Zeit ist unerheblich und kann automatisch bei Bedarf erfolgen.
+**UPDATE** Die aktuelle Version 6.0.0 der Library führt mit der *autopilot*-Funktion alles bei Bedarf automatisch aus. Dennoch empfiehtl es sich, den Selbsttest manuell anzustoßen um die Wartezeit von bis zu 30 Sekunden nicht während einer Kunden-Transaktion zu haben.
+
+Nach einem Neustart und nach mehr als 25 Stunden Betrieb muss das TSE-Modul einen Selbsttest machen, zudm muss regelmäßig ca. alle halbe Stunde die Zeit gesetzt werden. Beides macht die Python-Bibliothek transparent bei Bedarf um Transaktionen zu ermöglichen. **HINWEIS:** Da der Selbsttest bis zu einer Minute dauern kann, ist es sinnvoll, den Selbsttest beim Start und danach täglich zu machen bevor eine Kunden-Transaktion eröffnet wird. Das Setzen der Zeit ist unerheblich und kann automatisch bei Bedarf erfolgen.
 
 ```python
 if not tse.info.hasPassedSelfTest:

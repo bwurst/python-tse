@@ -45,10 +45,12 @@ def find_mountpoint():
 class Worm:
     wormlib = None
 
-    def __init__(self, clientid, mountpoint = None, time_admin_pin = None, library = None, keepalive = None):
+    def __init__(self, clientid, mountpoint = None, admin_puk = None, admin_pin = None, time_admin_pin = None, library = None, keepalive = None):
         self.qrcode_data = None
         log.setLevel(logging.DEBUG)
         self.time_admin_pin = time_admin_pin
+        if any(char in clientid for char in ['/', ':', '?']):
+            raise WormException(errno=WORM_ERROR_INVALID_PARAMETER, message='Client-ID contains illegal chars')
         self.clientid = clientid
         self.entry = None
         self.mountpoint = mountpoint
@@ -65,12 +67,47 @@ class Worm:
         self.entry = Worm_Entry(self)
         self.info = None
         try:
-            self.setup()
-        except:
-            log.error('TSE: Exception occured whilst initializing TSE. Possibly no module present?!')
-            pass
+            self.init()
+            if self.tse_needs_setup() and admin_puk and admin_pin and self.time_admin_pin:
+                self.tse_setup_ext(adminpuk=admin_puk, adminpin=admin_pin, timeadminpin=time_admin_pin)
+            self.tse_startup(adminpin=admin_pin, enableAutopilot=True)
+        except WormException as e:
+            log.error('TSE: Exception occured whilst initializing TSE. Possibly no module present?!', exc_info=e)
+            raise
+
+    def tse_startup(self, adminpin, enableAutopilot = True):
+        if self.tse_needs_setup():
+            raise WormException(errno=WORM_ERROR_TSE_NOT_INITIALIZED, message="TSE need setup")
+        pin = adminpin.encode('latin1')
+        client_id = self.clientid.encode('latin1')
+        log.debug('call worm_tse_startup()')
+
+        self.wormlib.worm_tse_startup.restype = WormError
+        self.wormlib.worm_tse_startup.argtypes = (WormContext, c_char_p, c_char_p, c_int, c_int)
+        ret = self.wormlib.worm_tse_startup(self.ctx, client_id,
+                                            pin, len(pin), int(enableAutopilot))
+        WormError_to_exception(ret)
+        self.info = Worm_Info(self)
+
+    def init(self, mountpoint = None):
+        # Hier können Laufzeitfehler auftreten, wenn die TSE nicht vorhanden ist!
+        if not mountpoint:
+            mountpoint = self.mountpoint
+        if not mountpoint:
+            mountpoint = find_mountpoint()
+        if not mountpoint:
+            log.error('cannot find TSE unit on any mount path')
+            raise WormException(WORM_ERROR_NO_WORM_CARD, 'Cannot find TSE unit!')
+
+        self.wormlib.worm_init.restype = WormError
+        self.wormlib.worm_init.argtypes = (POINTER(WormContext), c_char_p)
+        log.debug('call worm_init()')
+        ret = self.wormlib.worm_init(byref(self.ctx), mountpoint.encode('utf-8'))
+        WormError_to_exception(ret)
+
 
     def setup(self, mountpoint = None, keepalive=None):
+        '''Deprecated'''
         # Hier können Laufzeitfehler auftreten, wenn die TSE nicht vorhanden ist!
         if not mountpoint:
             mountpoint = self.mountpoint
@@ -147,6 +184,11 @@ class Worm:
         # liefert bytes. Wir konvertieren als latin1, da es da keine UnicodeDecodeErrors geben kann.
         return ret.decode('latin1')
 
+    def isOnlineSdk(self):
+        self.wormlib.worm_isOnlineSdk.restype = int
+        ret = self.wormlib.worm_isOnlineSdk()
+        return bool(ret == 1)
+
     def logTimeFormat(self):
         self.wormlib.worm_logTimeFormat.restype = c_char_p
         ret = self.wormlib.worm_logTimeFormat()
@@ -171,7 +213,8 @@ class Worm:
         return ret
     
     def tse_prepare(self, adminpuk, adminpin, time_admin_pin = None):
-        '''Kann beim Programmstart aufgerufen werden und kümmert sich um 
+        '''DEPRECATED, tse_startup() und tse_setup_ext() machen zusammen dasselbe in der Library
+        Kann beim Programmstart aufgerufen werden und kümmert sich um
         tse_setup() bei Bedarf oder richtet die clientid ein'''
         if not time_admin_pin:
             time_admin_pin = self.time_admin_pin
@@ -197,8 +240,17 @@ class Worm:
         if not self.info.hasValidTime:
             self.tse_updateTime()
     
-    
+
+    def tse_needs_setup(self):
+        self.wormlib.worm_tse_needs_setup.restype = WormError
+        self.wormlib.worm_tse_needs_setup.argtypes = (WormContext, POINTER(c_int))
+        result = c_int()
+        ret = self.wormlib.worm_tse_needs_setup(self.ctx, byref(result))
+        WormError_to_exception(ret)
+        return result.value == 1
+
     def tse_setup(self, adminpuk, adminpin, timeadminpin):
+        '''use tse_setup_ext instead'''
         if self.info.initializationState == WORM_INIT_INITIALIZED:
             raise WormException(WORM_ERROR_UNKNOWN, 'initialization ist schon erfolgt!')
         # Es muss mindestens ein SelfTest gemacht werden vor dem setup.
@@ -220,17 +272,52 @@ class Worm:
             timeadminpin = timeadminpin.encode('latin1')
         if len(timeadminpin) != 5:
             raise ValueError('Time-Admin-PIN muss genau 5 Stellen lang sein')
+        log.debug('call worm_tse_setup()')
         self.wormlib.worm_tse_setup.restype = WormError
         self.wormlib.worm_tse_setup.argtypes = (WormContext, c_char_p, c_int, c_char_p, c_int, c_char_p, c_int, c_char_p, c_int, c_char_p)
         ret = self.wormlib.worm_tse_setup(self.ctx, credentialseed, len(credentialseed), 
                                           adminpuk, len(adminpuk), adminpin, len(adminpin), timeadminpin, len(timeadminpin), 
                                           self.clientid.encode('latin1'))
         WormError_to_exception(ret)
-        self.info.update()
+        self.info = Worm_Info(self)
         return ret
-    
+
+    def tse_setup_ext(self, adminpuk, adminpin, timeadminpin):
+        '''This extended helper performs all actions of worm_tse_setup and then:
+
+            updates the time (worm_tse_updateTime)
+            optionally enables autopilot (worm_tse_autopilot_enable)
+
+        After this method returns successfully, transactions can be performed immediately with worm_transaction_start on all supported TSE versions.'''
+        credentialseed = b'SwissbitSwissbit'
+        if type(adminpuk) == str:
+            adminpuk = adminpuk.encode('latin1')
+            if len(adminpuk) != 6:
+                raise ValueError('Admin-PUK muss genau 6 Stellen lang sein')
+        if type(adminpin) == str:
+            adminpin = adminpin.encode('latin1')
+            if len(adminpin) != 5:
+                raise ValueError('Admin-PIN muss genau 5 Stellen lang sein')
+        if type(timeadminpin) == str:
+            timeadminpin = timeadminpin.encode('latin1')
+            if len(timeadminpin) != 5:
+                raise ValueError('Time-Admin-PIN muss genau 5 Stellen lang sein')
+        log.debug('call worm_tse_setup_ext()')
+        self.wormlib.worm_tse_setup_ext.restype = WormError
+        self.wormlib.worm_tse_setup_ext.argtypes = (WormContext, c_char_p, c_int, c_char_p, c_int, c_char_p, c_int, c_char_p, c_int, c_char_p)
+        ret = self.wormlib.worm_tse_setup_ext(self.ctx, credentialseed, len(credentialseed),
+                                          adminpuk, len(adminpuk), adminpin, len(adminpin), timeadminpin, len(timeadminpin),
+                                          self.clientid.encode('latin1'))
+        WormError_to_exception(ret)
+        self.info = Worm_Info(self)
+        return ret
+
+
     
     def tse_runSelfTest(self):
+        self.info.update()
+        if self.info.loggedInUser == WORM_USER_TIME_ADMIN:
+            self.user_logout()
         self.wormlib.worm_tse_runSelfTest.argtypes = (WormContext, c_char_p)
         self.wormlib.worm_tse_runSelfTest.restype = WormError
         ret = self.wormlib.worm_tse_runSelfTest(self.ctx, self.clientid.encode('latin1'))
@@ -244,6 +331,7 @@ class Worm:
         self.wormlib.worm_tse_updateTime.argtypes = (WormContext, worm_uint)
         self.wormlib.worm_tse_updateTime.restype = WormError
         ret = self.wormlib.worm_tse_updateTime(self.ctx, int(datetime.datetime.now().timestamp()))
+        self.user_logout()
         WormError_to_exception(ret)
         self.info.update()
         return ret
@@ -294,7 +382,7 @@ class Worm:
         self.info.update()
         return remainingRetries.value
         
-    def user_logout(self, userid):
+    def user_logout(self, userid=0):
         self.wormlib.worm_user_logout.argtypes = (WormContext, c_int)
         self.wormlib.worm_user_logout.restype = WormError
         ret = self.wormlib.worm_user_logout(self.ctx, userid)
@@ -408,7 +496,17 @@ class Worm:
         ret = self.wormlib.worm_transaction_listStartedTransactions(self.ctx, self.clientid.encode('latin1'), skip, numbers_buffer, 62, byref(count))
         WormError_to_exception(ret)
         return numbers_buffer[:count.value]
-            
+
+
+    def transaction_lastResponse(self, client_id=None):
+        r = Worm_Transaction_Response(self)
+        self.wormlib.worm_transaction_lastResponse.argtypes = (WormContext, c_char_p, WormTransactionResponse)
+        self.wormlib.worm_transaction_lastResponse.restype = WormError
+        ret = self.wormlib.worm_transaction_lastResponse(self.ctx, client_id, r.response)
+        WormError_to_exception(ret)
+        return r
+
+
         
     ####################################################################
     # Export
@@ -431,7 +529,12 @@ class Worm:
         ret = string_at(s, size=sLength.value)
         return ret
 
-    def export_tar(self, filename, clientid=None, time_start=None, time_end=None, trxid_start=None, trxid_end=None):
+    def export_tar(self, filename, adminpin=None, clientid=None, time_start=None, time_end=None, trxid_start=None, trxid_end=None):
+        self.info.update()
+        if adminpin and self.info.loggedInUser != WORM_USER_ADMIN:
+            # Wenn keine Adminpin übergeben wird, müssen wir drauf hoffen, dass der User schon eingeloggt ist
+            # oder die Hardware < 2.0 ist.
+            self.user_login(WORM_USER_ADMIN, adminpin)
         CALLBACK = CFUNCTYPE(c_int, POINTER(c_char), c_uint, c_void_p)
         callback = CALLBACK(self.export_tar_callback)
         with open(filename, 'wb') as self.tarfile:
@@ -449,15 +552,26 @@ class Worm:
                 ret = self.wormlib.worm_export_tar_filtered_transaction(self.ctx, worm_uint(trxid_start), worm_uint(trxid_end), c_char_p(clientid), callback, None)
                 WormError_to_exception(ret)
             else:
-                ret = self.wormlib.worm_export_tar(self.ctx, callback, None)
+                ret = self.wormlib.worm_export_tar_ignore_io_errors(self.ctx, callback, None)
                 WormError_to_exception(ret)
-    
+        self.user_logout(WORM_USER_ADMIN)
 
-    def export_tar_incremental(self, filename, lastState=None, callback=None):
+
+    def export_tar_incremental(self, filename, adminpin=None, lastState=None, callback=None):
+        self.info.update()
+        if adminpin and self.info.loggedInUser != WORM_USER_ADMIN:
+            # Wenn keine Adminpin übergeben wird, müssen wir drauf hoffen, dass der User schon eingeloggt ist
+            # oder die Hardware < 2.0 ist.
+            self.user_login(WORM_USER_ADMIN, adminpin)
         (firstSignatureCounter, lastSignatureCounter, return_state, allDataExported) = self.export_tar_incremental_ex(filename, lastState=lastState, maxExportSize=0, callback=callback)
         return (firstSignatureCounter, lastSignatureCounter, return_state)
 
-    def export_tar_incremental_ex(self, filename, lastState=None, maxExportSize=0, callback=None):
+    def export_tar_incremental_ex(self, filename, adminpin=None, lastState=None, maxExportSize=0, callback=None):
+        self.info.update()
+        if adminpin and self.info.loggedInUser != WORM_USER_ADMIN:
+            # Wenn keine Adminpin übergeben wird, müssen wir drauf hoffen, dass der User schon eingeloggt ist
+            # oder die Hardware < 2.0 ist.
+            self.user_login(WORM_USER_ADMIN, adminpin)
         '''inkrementeller export
         returns (firstSignatureCounter, lastSignatureCounter, newState, allDataExported)
         newState muss beim nächsten inkrementellen export als lastState übergeben werden.
@@ -535,11 +649,11 @@ class Worm:
     ####################################################################
         
         
-    def user_unblock(self):
+    def user_unblock(self, PUK=None):
         WormUserId = WORM_USER_TIME_ADMIN
-        puk = c_wchar_p(config.PUK)
+        puk = c_wchar_p(PUK)
         pukLength = 6 
-        newPin = c_wchar_p(config.PIN_TIME_ADMIN)
+        newPin = c_wchar_p(self.time_admin_pin)
         newPinLength = 5
         remainingRetries = c_int()
         

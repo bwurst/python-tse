@@ -42,9 +42,19 @@ class Worm_Entry:
             return self.__get_info_uint32(key)
         elif key in ['logMessageLength', 'processDataLength', 'type']:
             return self.__get_info_uint64(key)
+        elif key in ['readLogMessage',]:
+            return self.__get_string(key)
         else:
             raise AttributeError('unimplemented: %s' % key)
 
+    def __get_string(self, key):
+        s = c_char_p()
+        sLength = self.logMessageLength
+        getattr(self.wormlib, 'worm_entry_'+key).argtypes = (WormTransactionResponse, POINTER(c_char_p), POINTER(worm_uint))
+        getattr(self.wormlib, 'worm_entry_'+key)(self.entry, byref(s), sLength)
+        s = cast(s, POINTER(c_char))
+        ret = string_at(s, size=sLength)
+        return ret
 
     def __get_info_uint(self, key):
         getattr(self.wormlib, 'worm_entry_'+key).restype = c_uint

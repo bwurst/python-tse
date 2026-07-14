@@ -54,8 +54,11 @@ class Worm_Info:
         elif key in ['size', 'capacity', 'timeUntilNextSelfTest', 'timeUntilNextTimeSynchronization',
                      'startedTransactions', 'maxStartedTransactions',
                      'createdSignatures', 'maxSignatures', 'remainingSignatures', 'maxTimeSynchronizationDelay',
-                     'maxUpdateDelay', 'registeredClients', 'maxRegisteredClients', 'initializationState']:
+                     'maxUpdateDelay', 'registeredClients', 'maxRegisteredClients', 'initializationState',
+                     'pukBlockingDurationLogger', 'pukBlockingDurationTimeAdmin', 'loggedInUser']:
             return self.__get_info_uint32(key)
+        elif key in ['loggedInUserAutoLogOutTimeout',]:
+            return self.__get_info_uint16(key)
         elif key in ['customizationIdentifier', 'uniqueId']:
             return self.__get_string(key)
         elif key in ['tsePublicKey', 'tseSerialNumber']:
@@ -79,6 +82,13 @@ class Worm_Info:
         
     def __get_info_uint32(self, key):
         getattr(self.wormlib, 'worm_info_'+key).restype = c_uint32
+        getattr(self.wormlib, 'worm_info_'+key).argtypes = (WormInfo,)
+        ret = getattr(self.wormlib, 'worm_info_'+key)(self.info)
+        return ret
+
+
+    def __get_info_uint16(self, key):
+        getattr(self.wormlib, 'worm_info_'+key).restype = c_uint16
         getattr(self.wormlib, 'worm_info_'+key).argtypes = (WormInfo,)
         ret = getattr(self.wormlib, 'worm_info_'+key)(self.info)
         return ret

@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 
 import worm
 
-TSE = worm.Worm(clientid=config.clientId, time_admin_pin=config.PIN_TIME_ADMIN)
+TSE = worm.Worm(clientid=config.clientId, admin_pin=config.PIN, admin_puk=config.PUK, time_admin_pin=config.PIN_TIME_ADMIN)
 
 if len(sys.argv) > 1 and sys.argv[1] == '--info':
     print('Kapazität:', TSE.info.capacity)
@@ -46,8 +46,8 @@ if len(sys.argv) > 1 and sys.argv[1] == '--info':
     print('Zertifikat-Ablaufdatum:', TSE.info.certificateExpirationDate)
     
     print('Log-Time-Format:', TSE.logTimeFormat())
-    print('Hardware-Version: %i.%i.%i' % TSE.info.hardwareVersion)
-    print('Software-Version: %i.%i.%i' % TSE.info.softwareVersion)
+    print(f'Hardware-Version: {TSE.info.hardwareVersion}')
+    print(f'Software-Version: {TSE.info.softwareVersion}')
     print('Library-Version:', TSE.getVersion())
     print('TSE Form-Factor:', TSE.info.formFactor)
 
