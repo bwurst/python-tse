@@ -71,7 +71,8 @@ class Worm:
             self.info = Worm_Info(self)
             if self.tse_needs_setup() and admin_puk and admin_pin and self.time_admin_pin:
                 self.tse_setup_ext(adminpuk=admin_puk, adminpin=admin_pin, timeadminpin=time_admin_pin)
-            self.tse_startup(adminpin=admin_pin, enableAutopilot=True)
+            if admin_pin:
+                self.tse_startup(adminpin=admin_pin, enableAutopilot=True)
         except WormException as e:
             if e.errno == WORM_ERROR_TSE_NOT_INITIALIZED:
                 log.warning('TSE noch nicht initialisiert')
@@ -82,6 +83,8 @@ class Worm:
     def tse_startup(self, adminpin, enableAutopilot = True):
         if self.tse_needs_setup():
             raise WormException(errno=WORM_ERROR_TSE_NOT_INITIALIZED, message="TSE need setup")
+        if not adminpin:
+            raise WormException(errno=WORM_ERROR_INVALID_PARAMETER, message="Admin-PIN leer")
         pin = adminpin.encode('latin1')
         client_id = self.clientid.encode('latin1')
         log.debug('call worm_tse_startup()')
