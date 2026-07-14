@@ -68,10 +68,14 @@ class Worm:
         self.info = None
         try:
             self.init()
+            self.info = Worm_Info(self)
             if self.tse_needs_setup() and admin_puk and admin_pin and self.time_admin_pin:
                 self.tse_setup_ext(adminpuk=admin_puk, adminpin=admin_pin, timeadminpin=time_admin_pin)
             self.tse_startup(adminpin=admin_pin, enableAutopilot=True)
         except WormException as e:
+            if e.errno == WORM_ERROR_TSE_NOT_INITIALIZED:
+                log.warning('TSE noch nicht initialisiert')
+                return
             log.error('TSE: Exception occured whilst initializing TSE. Possibly no module present?!', exc_info=e)
             raise
 
@@ -298,10 +302,14 @@ class Worm:
             adminpin = adminpin.encode('latin1')
             if len(adminpin) != 5:
                 raise ValueError('Admin-PIN muss genau 5 Stellen lang sein')
+        if not timeadminpin:
+            timeadminpin = self.time_admin_pin
         if type(timeadminpin) == str:
             timeadminpin = timeadminpin.encode('latin1')
             if len(timeadminpin) != 5:
                 raise ValueError('Time-Admin-PIN muss genau 5 Stellen lang sein')
+        if not (adminpin and adminpuk and timeadminpin):
+            raise WormException(errno=WORM_ERROR_INVALID_PARAMETER, message="Parameter fehlen!")
         log.debug('call worm_tse_setup_ext()')
         self.wormlib.worm_tse_setup_ext.restype = WormError
         self.wormlib.worm_tse_setup_ext.argtypes = (WormContext, c_char_p, c_int, c_char_p, c_int, c_char_p, c_int, c_char_p, c_int, c_char_p)
