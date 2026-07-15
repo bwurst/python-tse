@@ -336,13 +336,14 @@ class Worm:
         self.info.update()
         return ret
         
-    def tse_updateTime(self):
-        if self.time_admin_pin:
-            self.user_login(WORM_USER_TIME_ADMIN, self.time_admin_pin)
+    def tse_updateTime(self, time_admin_pin=None):
+        if not time_admin_pin:
+            time_admin_pin = self.time_admin_pin
+        self.user_login(WORM_USER_TIME_ADMIN, time_admin_pin)
         self.wormlib.worm_tse_updateTime.argtypes = (WormContext, worm_uint)
         self.wormlib.worm_tse_updateTime.restype = WormError
         ret = self.wormlib.worm_tse_updateTime(self.ctx, int(datetime.datetime.now().timestamp()))
-        self.user_logout()
+        self.user_logout(WORM_USER_TIME_ADMIN)
         WormError_to_exception(ret)
         self.info.update()
         return ret
