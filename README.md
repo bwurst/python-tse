@@ -1,5 +1,10 @@
 # python-tse
 
+> [!IMPORTANT]
+> Der Autor verwendet diese Bibliothek selbst nicht mehr sondern empfiehlt stattdessen @raphaelm/pysbtse als Alternative mit deutlich besserer Codebase.
+>
+> Dieser Code wurde mit libWormAPI.so in Version 6.0.0 getestet und sollte weiterhin damit funktionieren.
+
 Gemäß KassenSicherungsVerordnung muss jede in Deutschland betriebene Bargeld-Registrierkasse ab 2020 mit einem Sicherheitsmodul "TSE" / "Technische Sicherheits-Einrichtung" ausgerüstet werden. Ein Hersteller dieser Geräte ist die schweizerische Firma Swissbit.
 
 Voraussetzung für die Nutzung dieses Moduls ist eine binäre Bibliothek, die mit der TSE kommuniziert. Die Weitergabe-Auflagen dieser Bibliothek sind restriktiv, daher ist diese Bibliothek nicht hier im Repository enthalten. Käufer der Entwickler-Version erhalten diese Daten vom Händler.
